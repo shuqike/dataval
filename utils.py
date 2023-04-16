@@ -23,26 +23,33 @@ import matplotlib.pyplot as plt
 
 
 def convergence_plots(marginals):
-    '''Plot the cumulative sum of the elements along a given axis.'''
+    '''Plot the cumulative sum of the elements along a given axis.
+    See notebooks/dataShap.ipynb
+    '''
     plt.rcParams['figure.figsize'] = 15,15
     for i, idx in enumerate(np.arange(min(25, marginals.shape[-1]))):
         plt.subplot(5,5,i+1)
         plt.plot(np.cumsum(marginals[:, idx])/np.arange(1, len(marginals)+1))
 
 def is_integer(array):
-    '''Check if the array elements are all integers'''
+    '''Check if the array elements are all integers
+    Remark: we probably won't use this function throughout this project
+    '''
     return (np.equal(np.mod(array, 1), 0).mean()==1)
 
 def is_fitted(model):
     '''Checks if model object has any attributes ending with an underscore
-    Refer to Python PEP 8
+    Refer to Python PEP 8:
     _single_leading_underscore: weak "internal use" indicator. E.g. from M import * does not import objects whose name starts with an underscore.
     __double_leading_underscore: when naming a class attribute, invokes name mangling (inside class FooBar, __boo becomes _FooBar__boo; see below).
     __double_leading_and_trailing_underscore__: "magic" objects or attributes that live in user-controlled namespaces. E.g. __init__, __import__ or __file__. Never invent such names; only use them as documented.
+    Remark: we probably won't use this function throughout this project
     '''
     return 0 < len( [k for k,v in inspect.getmembers(model) if k.endswith('_') and not k.startswith('__')] )
 
 def return_model(mode, **kwargs):
+    '''Might be problematic because the following code uses TensorFlow 1 instead of TensorFlow 2
+    '''
     if inspect.isclass(mode):
         assert getattr(mode, 'fit', None) is not None, 'Custom model family should have a fit() method'
         model = mode(**kwargs)
@@ -138,8 +145,6 @@ def return_model(mode, **kwargs):
         raise ValueError("Invalid mode!")
     return model
 
-
-
 def generate_features(latent, dependency):
     features = []
     n = latent.shape[0]
@@ -149,8 +154,7 @@ def generate_features(latent, dependency):
         features.append(np.reshape(holder,[n,-1]))
         exp = np.expand_dims(exp,-1)
         holder = exp * np.expand_dims(holder,1)
-    return np.concatenate(features,axis=-1)  
-
+    return np.concatenate(features,axis=-1)
 
 def label_generator(problem, X, param, difficulty=1, beta=None, important=None):
     if important is None or important > X.shape[-1]:
@@ -183,10 +187,8 @@ def label_generator(problem, X, param, difficulty=1, beta=None, important=None):
         raise ValueError('Invalid problem specified!')
     return beta, y, y_true, funct
 
-
 def one_iteration(clf, X, y, X_test, y_test, mean_score, tol=0.0, c=None, metric='accuracy'):
-    """Runs one iteration of TMC-Shapley."""
-    
+    '''Runs one iteration of TMC-Shapley (Truncated Monte Carlo Shapley).'''
     if metric == 'auc':
         def score_func(clf, a, b):
             return roc_auc_score(b, clf.predict_proba(a)[:,1])
