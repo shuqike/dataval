@@ -1,13 +1,28 @@
 # dataval
 
+## Motivation
+
+Why do we need to consider an online setting for data valuation?
+
 > Machine learning is going real-time ... Latency matters, especially for user-facing applications. In 2009, Google’s experiments demonstrated that increasing web search latency 100 to 400 ms reduces the daily number of searches per user by 0.2% to 0.6%. In 2019, Booking.com found that an increase of 30% in latency cost about 0.5% in conversion rates — “a relevant cost for our business.”
 >
 > ---Chip Huyen
+
+Why do we need to consider vector database? Search engine provides a nice online setting. There are some use cases:
+
+> - Semantic text search: Convert text data into vector embeddings using an NLP transformer such as a sentence embedding model, then index and search through those vectors using Pinecone.
+> - Generative question-answering: Retrieve relevant contexts to queries from Pinecone and pass these to a generative model like OpenAI to generate an answer backed by real data sources.
+> - Hybrid search: Perform semantic and keyword search over your data in one query and combine the results for more relevant results.
+> - Image similarity search: Transform image data into vector embeddings and build an index with Pinecone. Then convert query images into vectors and retrieve similar images.
+> - Product recommendations: Generate product recommendations for ecommerce based on vectors representing users.
+>
+> ---Pinecone Document
 
 ## Implementation plan
 
 - [ ] Online supervised learning
 - [ ] Online Truncated Monte Carlo
+- [ ] Connect the data valuation to vector database
 
 ## Libraries
 
@@ -31,7 +46,12 @@
 | ------- | --------- | -------- |
 | [Individual household electric power consumption](https://archive-beta.ics.uci.edu/dataset/235/individual+household+electric+power+consumption) | minutes | 4 years |
 | [News Popularity in Multiple Social Media Platforms](https://archive-beta.ics.uci.edu/dataset/432/news+popularity+in+multiple+social+media+platforms) | minutes | 9 months |
-e
+
+### Rare event/threat detection
+
+| Dataset | Timestamp | Timespan |
+| ------- | --------- | -------- |
+| [CSE-CIC-IDS2018 on AWS](https://www.unb.ca/cic/datasets/ids-2018.html) | NaN | 1-2days |
 
 ## References
 
@@ -40,3 +60,4 @@ e
 3. [Awesome Online Machine Learning](https://github.com/online-ml/awesome-online-machine-learning)
 4. [The correct way to evaluate online machine learning models, 2020](https://maxhalford.github.io/blog/online-learning-evaluation/)
 5. [Real-time machine learning: challenges and solutions, 2022](https://huyenchip.com/2022/01/02/real-time-machine-learning-challenges-and-solutions.html)
+6. [Threat Detection Using Pinecone](https://docs.pinecone.io/docs/it-threat-detection)
