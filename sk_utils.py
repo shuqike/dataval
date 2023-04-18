@@ -206,7 +206,9 @@ def one_iteration(clf, X, y, X_test, y_test, mean_score, tol=0.0, c=None, metric
 
     # idxs: Random permutation of train data points
     idxs, marginal_contribs = np.random.permutation(len(c.keys())), np.zeros(len(X))
-    # Count frequency of occurrences of each integer label
+    # Count frequency of occurrences of each integer label;
+    # then set the maximum frequency as a baseline score;
+    # which is the best result by blind guessing
     new_score = np.max(np.bincount(y)) * 1./len(y) if np.mean(y//1 == y/1)==1 else 0.
     # 'start' controls the starting datum
     start = 0
