@@ -151,7 +151,7 @@ class ShapNN(object):
                 config.gpu_options.allow_growth=True
                 self.sess = tf.compat.v1.Session(config=config)
         with self.graph.as_default():
-            tf.random.set_seed(self.seed)
+            tf.random.set_seed(self.random_seed)
             try:
                 self.global_step = tf.compat.v1.train.create_global_step()
             except ValueError:
@@ -237,13 +237,13 @@ class ShapNN(object):
                     uninitialized_vars.append(var)
         else:
             uninitialized_vars = tf.compat.v1.global_variables()
-        self.sess.run(tf.compat.v1.keras.initializers.variables(uninitialized_vars))
+        self.sess.run(tf.compat.v1.variables_initializer(uninitialized_vars))
         
     def _build_model(self, X, y):
         
         self.num_classes = len(set(y))
         if self.initializer is None:
-            initializer = tf.compat.v1.keras.initializers.VarianceScaling(distribution='uniform')
+            initializer = tf.keras.initializers.VarianceScaling(distribution='uniform')
         if self.activation is None:
             activation = lambda x: tf.nn.relu(x)
         self.input_ph = tf.compat.v1.placeholder(dtype=tf.float32, shape=(None,) + X.shape[1:], name='input')
@@ -310,13 +310,13 @@ class ShapNN(object):
     def _dense(self, x, out_dim, dropout=tf.constant(0.), initializer=None, activation=None):
         
         if initializer is None:
-            initializer = tf.compat.v1.keras.initializers.VarianceScaling(distribution='uniform')
+            initializer = tf.keras.initializers.VarianceScaling(distribution='uniform')
         w = tf.compat.v1.get_variable('DW', [x.get_shape()[1], out_dim], initializer=initializer)
         b = tf.compat.v1.get_variable('Db', [out_dim], initializer=tf.constant_initializer())
         x = tf.nn.dropout(x, 1. - dropout)
         if activation:
             x = activation(x)
-        return tf.nn.xw_plus_b(x, w, b)
+        return tf.compat.v1.nn.xw_plus_b(x, w, b)
     
     def _reg_loss(self, order=2):
         """Regularization loss for weight decay."""
@@ -402,7 +402,7 @@ class CShapNN(ShapNN):
         
         
         if self.initializer is None:
-            initializer = tf.compat.v1.keras.initializers.VarianceScaling(distribution='uniform')
+            initializer = tf.keras.initializers.VarianceScaling(distribution='uniform')
         if self.activation is None:
             activation = lambda x: tf.nn.relu(x)
         self.input_ph = tf.compat.v1.placeholder(dtype=tf.float32, shape=(None,) + X.shape[1:], name='input')

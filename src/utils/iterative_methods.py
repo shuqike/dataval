@@ -30,7 +30,13 @@ class TruncatedMC:
         self.model_family = model_family
         self.metric = metric
         self.directory = directory
+        # Hidden layer setting
         self.hidden_units = kwargs.get('hidden_layer_sizes', [])
         if self.model_family == 'logistic':
             self.hidden_units = []
-        
+        # Sanity check for single/multiclass label
+        if len(set(self.y)) > 2:
+            assert self.metric != 'f1', 'Invalid metric for multiclass!'
+            assert self.metric != 'auc', 'Invalid metric for multiclass!'
+        self.model = return_model(self.model_family, **kwargs)
+        self.random_score = self.init_score(self.metric)
