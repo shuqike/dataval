@@ -439,6 +439,7 @@ def convergence_plots(marginals):
     '''Plot the cumulative sum of the elements along a given axis.
     See notebooks/dataShap.ipynb
     '''
+    plt.rcParams['ytick.labelsize'] = 5
     plt.rcParams['figure.figsize'] = 15,15
     for i, idx in enumerate(np.arange(min(25, marginals.shape[-1]))):
         plt.subplot(5,5,i+1)
