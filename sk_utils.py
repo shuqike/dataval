@@ -191,7 +191,7 @@ def one_iteration(clf, X, y, X_test, y_test, mean_score, tol=0.0, c=None, metric
     '''Runs one iteration of TMC-Shapley (Truncated Monte Carlo Shapley).
     clf: the classifier
     tol: performance tolerance
-    c: 
+    c: the map from X to the real datum index
     '''
     if metric == 'auc':
         def score_func(clf, a, b):
@@ -200,7 +200,7 @@ def one_iteration(clf, X, y, X_test, y_test, mean_score, tol=0.0, c=None, metric
         def score_func(clf, a, b):
             return clf.score(a, b)
     else:
-        raise ValueError("Wrong metric!")  
+        raise ValueError("Wrong metric!")
     if c is None:
         c = {i:np.array([i]) for i in range(len(X))}
 
@@ -224,24 +224,25 @@ def one_iteration(clf, X, y, X_test, y_test, mean_score, tol=0.0, c=None, metric
         except:
             clf.fit(np.zeros((0,) +  X.shape[1:]), y)
         old_score = new_score
+        # Add the new datum to the training batch
         X_batch, y_batch = np.concatenate([X_batch, X[c[idx]]]), np.concatenate([y_batch, y[c[idx]]])
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             try:
+                # Train the model and get the current score
                 clf.fit(X_batch, y_batch)
                 temp_score = score_func(clf, X_test, y_test)
                 if temp_score>-1 and temp_score<1.: #Removing measningless r2 scores
                     new_score = temp_score
             except:
                 continue
+        # Update the marginal contribution with the weighted score difference
         marginal_contribs[c[idx]] = (new_score - old_score)/len(c[idx])
         if np.abs(new_score - mean_score)/mean_score < tol:
             break
     return marginal_contribs, idxs
 
-
 def marginals(clf, X, y, X_test, y_test, c=None, tol=0., trials=3000, mean_score=None, metric='accuracy'):
-    
     if metric == 'auc':
         def score_func(clf, a, b):
             return roc_auc_score(b, clf.predict_proba(a)[:,1])
