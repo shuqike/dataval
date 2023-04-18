@@ -33,6 +33,7 @@ We compare the time and memory consumption of different setting pairs:
 - W/ and w/o data removal
 - W/ and w/o real time validation dataset
 - Stateless/stateful training: the model is trained from scratch or the model continues training on new data (fine-tuning)
+- W/ and w/o embedding
 - Single/MultiModal
 - Sequential/Parllel processing
 
