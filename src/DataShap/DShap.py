@@ -1,6 +1,6 @@
-
-#______________________________________PEP8____________________________________
-#_______________________________________________________________________
+'''Refer to https://github.com/amiratag/DataShapley/blob/master/DShap.py
+- Upgraded some TensorFlow1 API to TensorFlow2 API
+'''
 import matplotlib
 matplotlib.use('Agg')
 import numpy as np
@@ -50,17 +50,17 @@ class DShap(object):
             
         if seed is not None:
             np.random.seed(seed)
-            tf.random.set_random_seed(seed)
+            tf.random.set_seed(seed)
         self.problem = problem
         self.model_family = model_family
         self.metric = metric
         self.directory = directory
         self.hidden_units = kwargs.get('hidden_layer_sizes', [])
-        if self.model_family is 'logistic':
+        if self.model_family == 'logistic':
             self.hidden_units = []
         if self.directory is not None:
             if overwrite and os.path.exists(directory):
-                tf.gfile.DeleteRecursively(directory)
+                tf.compat.v1.gfile.DeleteRecursively(directory)
             if not os.path.exists(directory):
                 os.makedirs(directory)  
                 os.makedirs(os.path.join(directory, 'weights'))
@@ -297,9 +297,9 @@ class DShap(object):
             tolerance = self.tolerance         
         marginals, idxs = [], []
         for iteration in range(iterations):
-            if 10*(iteration+1)/iterations % 1 == 0:
-                print('{} out of {} TMC_Shapley iterations.'.format(
-                    iteration + 1, iterations))
+            # if 10*(iteration+1)/iterations % 1 == 0:
+            #     print('{} out of {} TMC_Shapley iterations.'.format(
+            #         iteration + 1, iterations))
             marginals, idxs = self.one_iteration(
                 tolerance=tolerance, 
                 sources=sources
@@ -445,9 +445,9 @@ class DShap(object):
                      address=address, hidden_units=self.hidden_units)
         for iteration in range(iterations):
             model.fit(np.zeros((0, self.X.shape[-1])), self.y)
-            if 10 * (iteration+1) / iterations % 1 == 0:
-                print('{} out of {} G-Shapley iterations'.format(
-                    iteration + 1, iterations))
+            # if 10 * (iteration+1) / iterations % 1 == 0:
+            #     print('{} out of {} G-Shapley iterations'.format(
+            #         iteration + 1, iterations))
             marginal_contribs = np.zeros(len(sources.keys()))
             model.fit(self.X, self.y, self.X_test, self.y_test, 
                       sources=sources, metric=self.metric, 

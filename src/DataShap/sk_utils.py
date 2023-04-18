@@ -1,5 +1,6 @@
 '''Refer to https://github.com/amiratag/DataShapley/blob/master/shap_utils.py
-Added some comments
+- Upgraded some TensorFlow1 API to TensorFlow2 API
+- Added some comments
 '''
 import numpy as np
 import inspect
@@ -146,11 +147,11 @@ class ShapNN(object):
         if not self.is_built:
             self.graph = tf.Graph() 
             with self.graph.as_default():
-                config = tf.ConfigProto()
+                config = tf.compat.v1.ConfigProto()
                 config.gpu_options.allow_growth=True
-                self.sess = tf.Session(config=config)
+                self.sess = tf.compat.v1.Session(config=config)
         with self.graph.as_default():
-            tf.set_random_seed(self.random_seed)
+            tf.random.set_seed(self.seed)
             try:
                 self.global_step = tf.train.create_global_step()
             except ValueError:
@@ -590,10 +591,10 @@ def label_generator(problem, X, param, difficulty=1, beta=None, important=None):
     funct = lambda x: (np.sum(beta * generate_features(
         x[:, important_dims], difficulty), -1) - mean) / std
     y_true = (y_true - mean)/std
-    if problem is 'classification':
+    if problem == 'classification':
         y_true = logistic.cdf(param * y_true)
         y = (np.random.random(X.shape[0]) < y_true).astype(int)
-    elif problem is 'regression':
+    elif problem == 'regression':
         y = y_true + param * np.random.normal(size=len(y_true))
     else:
         raise ValueError('Invalid problem specified!')
