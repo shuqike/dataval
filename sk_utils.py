@@ -1,4 +1,6 @@
-'''Refer to https://github.com/amiratag/DataShapley/blob/master/shap_utils.py'''
+'''Refer to https://github.com/amiratag/DataShapley/blob/master/shap_utils.py
+Added some comments
+'''
 import numpy as np
 import inspect
 from scipy.stats import logistic
@@ -238,11 +240,18 @@ def one_iteration(clf, X, y, X_test, y_test, mean_score, tol=0.0, c=None, metric
                 continue
         # Update the marginal contribution with the weighted score difference
         marginal_contribs[c[idx]] = (new_score - old_score)/len(c[idx])
+        # if the score up is smaller than the performance tolerance,
+        # i.e. cannot improve much with this training proceedure, then stop
         if np.abs(new_score - mean_score)/mean_score < tol:
             break
     return marginal_contribs, idxs
 
 def marginals(clf, X, y, X_test, y_test, c=None, tol=0., trials=3000, mean_score=None, metric='accuracy'):
+    '''Runs the full TMC-Shapley (Truncated Monte Carlo Shapley) for so many trials
+    clf: the classifier
+    tol: performance tolerance
+    c: the map from X to the real datum index
+    '''
     if metric == 'auc':
         def score_func(clf, a, b):
             return roc_auc_score(b, clf.predict_proba(a)[:,1])
@@ -250,7 +259,7 @@ def marginals(clf, X, y, X_test, y_test, c=None, tol=0., trials=3000, mean_score
         def score_func(clf, a, b):
             return clf.score(a, b)
     else:
-        raise ValueError("Wrong metric!")  
+        raise ValueError("Wrong metric!")
     if mean_score is None:
         accs = []
         for _ in range(100):
