@@ -20,7 +20,7 @@ Why do we need to consider vector database? Search engine provides a nice online
 
 ## Implementation plan
 
-- [ ] Online supervised learning
+- [ ] Online supervised learning/continual learning algorithms
 - [ ] Online Truncated Monte Carlo
 - [ ] Mean field inference learning
 - [ ] Connect the data valuation to vector database
