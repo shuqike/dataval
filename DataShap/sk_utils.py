@@ -15,7 +15,6 @@ from sklearn.naive_bayes import MultinomialNB
 from sklearn.gaussian_process import GaussianProcessClassifier
 from sklearn.svm import SVC, LinearSVC
 from sklearn.base import clone
-import inspect
 from sklearn.metrics import roc_auc_score, f1_score
 import warnings
 import tensorflow as tf
