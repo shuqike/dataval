@@ -22,13 +22,31 @@ Why do we need to consider vector database? Search engine provides a nice online
 
 - [ ] Online supervised learning
 - [ ] Online Truncated Monte Carlo
+- [ ] Mean field inference learning
 - [ ] Connect the data valuation to vector database
+
+## Comparison
+
+We compare the time and memory consumption of different setting pairs:
+
+- W/ and w/o data removal
+- Stateless/stateful training: the model is trained from scratch or the model continues training on new data (fine-tuning)
+- Single/MultiModal
 
 ## Libraries
 
 1. [River](https://github.com/online-ml/river/). River is a Python library for online machine learning/streaming data.
+2. [Flink](https://flink.apache.org/). Apache Flink is a framework and distributed processing engine for stateful computations over unbounded and bounded data streams.
+3. [BARS Benchmark](https://openbenchmark.github.io/BARS/index.html#). BARS is a large, open benchmark for recommender systems.
+4. [DeepCTR](https://github.com/shenweichen/DeepCTR). DeepCTR is a easy-to-use, modular and extendible package of deep-learning based CTR(Clickthrough rate prediction) models along with lots of core components layers which can be used to easily build custom models.
 
 ## Dataset pool
+
+### Recommendation system
+
+| Dataset | Timestamp | Timespan |
+| ------- | --------- | -------- |
+| [MIND: MIcrosoft News Dataset](https://msnews.github.io/) | NaN | 6 weeks |
 
 ### Networks
 
