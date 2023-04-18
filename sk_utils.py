@@ -188,7 +188,11 @@ def label_generator(problem, X, param, difficulty=1, beta=None, important=None):
     return beta, y, y_true, funct
 
 def one_iteration(clf, X, y, X_test, y_test, mean_score, tol=0.0, c=None, metric='accuracy'):
-    '''Runs one iteration of TMC-Shapley (Truncated Monte Carlo Shapley).'''
+    '''Runs one iteration of TMC-Shapley (Truncated Monte Carlo Shapley).
+    clf: the classifier
+    tol: performance tolerance
+    c: 
+    '''
     if metric == 'auc':
         def score_func(clf, a, b):
             return roc_auc_score(b, clf.predict_proba(a)[:,1])
@@ -199,14 +203,19 @@ def one_iteration(clf, X, y, X_test, y_test, mean_score, tol=0.0, c=None, metric
         raise ValueError("Wrong metric!")  
     if c is None:
         c = {i:np.array([i]) for i in range(len(X))}
+
+    # idxs: Random permutation of train data points
     idxs, marginal_contribs = np.random.permutation(len(c.keys())), np.zeros(len(X))
+    # Count frequency of occurrences of each integer label
     new_score = np.max(np.bincount(y)) * 1./len(y) if np.mean(y//1 == y/1)==1 else 0.
+    # 'start' controls the starting datum
     start = 0
     if start:
         X_batch, y_batch =\
         np.concatenate([X[c[idx]] for idx in idxs[:start]]), np.concatenate([y[c[idx]] for idx in idxs[:start]])
     else:
         X_batch, y_batch = np.zeros((0,) +  tuple(X.shape[1:])), np.zeros(0).astype(int)
+    # Start from the starting datum
     for n, idx in enumerate(idxs[start:]):
         try:
             clf = clone(clf)
