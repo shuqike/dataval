@@ -24,14 +24,17 @@ Why do we need to consider vector database? Search engine provides a nice online
 - [ ] Online Truncated Monte Carlo
 - [ ] Mean field inference learning
 - [ ] Connect the data valuation to vector database
+- [ ] Parallelization of all the algorithms
 
 ## Comparison
 
 We compare the time and memory consumption of different setting pairs:
 
 - W/ and w/o data removal
+- W/ and w/o real time validation dataset
 - Stateless/stateful training: the model is trained from scratch or the model continues training on new data (fine-tuning)
 - Single/MultiModal
+- Sequential/Parllel processing
 
 ## Libraries
 
@@ -77,5 +80,6 @@ We compare the time and memory consumption of different setting pairs:
 2. [MIT 6.883, Online Methods in Machine Learning: Theory and Applications, 2016](https://www.mit.edu/~rakhlin/6.883/). Outdated lecture on online ML.
 3. [Awesome Online Machine Learning](https://github.com/online-ml/awesome-online-machine-learning)
 4. [The correct way to evaluate online machine learning models, 2020](https://maxhalford.github.io/blog/online-learning-evaluation/)
-5. [Real-time machine learning: challenges and solutions, 2022](https://huyenchip.com/2022/01/02/real-time-machine-learning-challenges-and-solutions.html)
-6. [Threat Detection Using Pinecone](https://docs.pinecone.io/docs/it-threat-detection)
+5. [Machine learning is going real-time](https://huyenchip.com/2020/12/27/real-time-machine-learning.html)
+6. [Real-time machine learning: challenges and solutions, 2022](https://huyenchip.com/2022/01/02/real-time-machine-learning-challenges-and-solutions.html)
+7. [Threat Detection Using Pinecone](https://docs.pinecone.io/docs/it-threat-detection)
