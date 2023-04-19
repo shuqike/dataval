@@ -10,21 +10,15 @@ def return_model(model_family='logistic', **kwargs):
         model = LogisticRegression(solver=solver, n_jobs=n_jobs, 
                                    max_iter=max_iter, random_state=666)
     elif model_family == 'vit':
-        pretrained = kwargs.get('pretrained', False)
-        model = models.ViTbp16(pretrained)
+        model = models.ViTbp16(**kwargs)
     elif model_family == 'swin-tiny':
-        pretrained = kwargs.get('pretrained', False)
-        model = models.SwinTiny(pretrained)
+        model = models.SwinTiny(**kwargs)
     elif model_family == 'mobilenet':
-        pretrained = kwargs.get('pretrained', False)
-        model = models.MobileNet(pretrained)
+        model = models.MobileNet(**kwargs)
     elif model_family == 'resnet-18':
-        pretrained = kwargs.get('pretrained', False)
-        model = models.ResNet18(pretrained)
+        model = models.ResNet18(**kwargs)
     elif model_family == 'resnet-50':
-        pretrained = kwargs.get('pretrained', False)
-        model = models.ResNet50(pretrained)
+        model = models.ResNet50(**kwargs)
     elif model_family == 'convnext-tiny':
-        pretrained = kwargs.get('pretrained', False)
-        model = models.ConvNeXTTiny(pretrained)
+        model = models.ConvNeXTTiny(**kwargs)
     return model

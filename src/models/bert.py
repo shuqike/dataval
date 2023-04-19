@@ -19,9 +19,6 @@ class Tweet_roBERTa_base:
         self._tokenizer = AutoTokenizer.from_pretrained(MODEL)
         self._model = AutoModelForSequenceClassification.from_pretrained(MODEL)
 
-    def fit(self, texts, labels):
-        pass
-    
     def predict(self, texts):
         encoded_inputs = [
             self._tokenizer(
