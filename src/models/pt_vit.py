@@ -3,17 +3,16 @@ from transformers import ViTImageProcessor, ViTForImageClassification, AutoFeatu
 
 
 class ViTbp16(Casifier):
-    def __init__(self, **kwargs) -> None:
-        # As the Vision Transformer expects each image to be of the same size (resolution),
-        # one can use ViTImageProcessor to resize (or rescale) and normalize images for the model.
-        self._processor = ViTImageProcessor.from_pretrained('google/vit-base-patch16-224')
-        # Load from pretrained vit model
-        self._model = ViTForImageClassification.from_pretrained('google/vit-base-patch16-224')
-        super().__init__(**kwargs)
+    def _get_model(self):
+        return ViTForImageClassification.from_pretrained('google/vit-base-patch16-224')
+
+    def _get_processor(self):
+        return ViTImageProcessor.from_pretrained('google/vit-base-patch16-224')
 
 
 class SwinTiny(Casifier):
-    def __init__(self, **kwargs) -> None:
-        self._processor = AutoFeatureExtractor.from_pretrained("microsoft/swin-tiny-patch4-window7-224")
-        self._model = SwinForImageClassification.from_pretrained("microsoft/swin-tiny-patch4-window7-224")
-        super().__init__(**kwargs)
+    def _get_model(self):
+        return SwinForImageClassification.from_pretrained("microsoft/swin-tiny-patch4-window7-224")
+
+    def _get_processor(self):
+        return AutoFeatureExtractor.from_pretrained("microsoft/swin-tiny-patch4-window7-224")

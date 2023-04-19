@@ -5,7 +5,12 @@ from transformers import TrainingArguments, Trainer, AutoModelForSequenceClassif
 
 
 class Casifier:
+    def _get_model(self): raise NotImplementedError
+    def _get_processor(self): raise NotImplementedError
+
     def __init__(self, **kwargs) -> None:
+        self._processor = self._get_model()
+        self._model = self._get_processor()
         self._seed = kwargs.get('seed', 3407)
         self._max_epoch = kwargs.get('max_epoch', 100)
         self._batch_size = kwargs.get('batch_size', 64)
@@ -34,14 +39,14 @@ class Casifier:
             seed=self._seed,
         )
         # Re-initialize weights for data valuation
-        pretrained = kwargs.get('pretrained', False)
-        if pretrained is False:
+        self._pretrained = kwargs.get('pretrained', False)
+        if self._pretrained  is False:
             self._model.init_weights()
         # Put model into device
         self._model = self._model.to(self._device)
 
     def _preproc(self, X):
-        return self._preprocessor(X, return_tensors="pt")
+        return self._processor(X, return_tensors="pt")
 
     def _compute_train_metrics(self, eval_pred):
         logits, labels = eval_pred
@@ -50,6 +55,14 @@ class Casifier:
             predictions=predictions,
             references=labels
         )
+
+    def reset(self):
+        self._model = self._get_model()
+        # Re-initialize weights for data valuation
+        if self._pretrained is False:
+            self._model.init_weights()
+        # Put model into device
+        self._model = self._model.to(self._device)
 
     def raw_predict(self, X):
         X = self._preproc(X)
@@ -83,11 +96,10 @@ class Casifier:
 
 
 class Lancer(Casifier):
-    def __init__(self, **kwargs) -> None:
-        num_labels = kwargs.get('num_labels')
-        model_family = kwargs.get('model_family', 'bert-base-uncased')
-        self._model = AutoModelForSequenceClassification.from_pretrained(model_family, num_labels=num_labels)
-        super().__init__(**kwargs)
+    def _get_model(self):
+        return AutoModelForSequenceClassification.from_pretrained(self._model_family, num_labels=self._num_labels)
 
-    def raw_predict(self, X):
-        raise NotImplementedError
+    def __init__(self, **kwargs) -> None:
+        self._num_labels = kwargs.get('num_labels')
+        self._model_family = kwargs.get('model_family', 'bert-base-uncased')
+        super().__init__(**kwargs)
