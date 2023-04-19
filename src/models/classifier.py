@@ -44,6 +44,8 @@ class Casifier:
             self._model.init_weights()
         # Put model into device
         self._model = self._model.to(self._device)
+        # Prepare a dummy trainer
+        self._trainer = Trainer(model=self._model)
 
     def _preproc(self, X):
         return self._processor(X, return_tensors="pt")
@@ -73,26 +75,25 @@ class Casifier:
     def predict(self, x):
         return self._model(x)
 
-    def perf_metric(self, X, y):
-        outputs = self._model(**X)
-        logits = outputs.logits
-        y_hat = logits.argmax(-1).item()
+    def perf_metric(self, eval_dataset):
+        outputs = self._trainer.predict(eval_dataset)
+        y_hat = outputs.predictions
         return self._perf_metric.compute(
             predictions=y_hat,
-            references=y
+            references=eval_dataset['label']
         )
 
     def fit(self, train_dataset, eval_dataset=None):
-        '''fit is an offline method
-        '''
-        trainer = Trainer(
+        """'fit' is an offline method.
+        """
+        self._trainer = Trainer(
             model=self._model,
             args=self._training_args,
             train_dataset=train_dataset,
             eval_dataset=eval_dataset,
             compute_metrics=self._compute_train_metrics,
         )
-        trainer.train()
+        self._trainer.train()
 
 
 class Lancer(Casifier):

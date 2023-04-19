@@ -3,6 +3,8 @@ from sklearn.linear_model import LogisticRegression
 
 
 def return_model(model_family='logistic', **kwargs):
+    """Generate models with 'fit' attribute
+    """
     if model_family == 'logistic':
         solver = kwargs.get('solver', 'liblinear')
         n_jobs = kwargs.get('n_jobs', None)
