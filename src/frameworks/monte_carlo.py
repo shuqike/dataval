@@ -9,7 +9,6 @@ class TruncatedMC(Valuator):
     def __init__(self,
                  model_family,
                  train_dataset,
-                 num_data,
                  test_dataset,
                  sources=None,
                  seed=None,
