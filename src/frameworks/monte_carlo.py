@@ -33,6 +33,7 @@ class TruncatedMC(Valuator):
             directory: Directory to save results and figures
             **kwargs: Arguments of the model
         """
+
         # Sanity check for datasets
         assert 'feature' in train_dataset,\
             'Cannot find "feature" in the training dataset dictionary'
