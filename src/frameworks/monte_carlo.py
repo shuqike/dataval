@@ -94,6 +94,30 @@ class TruncatedMC(Valuator):
             self.vals_loo[sources[i]] = (baseline_val - removed_val)
             self.vals_loo[sources[i]] /= len(sources[i])
 
+    def _calc_gshap(self):
+        """Method for running G-Shapley algorithm.
+        Args:
+            iterations: Number of iterations of the algorithm.
+            err: Stopping error criteria
+            learning_rate: Learning rate used for the algorithm. If None calculates the best learning rate.
+            sources: If values are for sources of data points rather than individual points. In the format of an assignment array or dict.
+        """
+        raise NotImplementedError
+
+    def _calc_tmcshap(self):
+        """Runs TMC-Shapley algorithm.
+        Args:
+            iterations: Number of iterations to run.
+            tolerance: Truncation tolerance ratio.
+            sources: If values are for sources of data points rather than individual points. In the format of an assignment array or dict.
+        """
+        raise NotImplementedError
+
+    def save_results(self):
+        """Saves results computed so far.
+        """
+        raise NotImplementedError
+
     def run(self, save_every, err, tol=1e-2, do_gshap=True, do_loo=False):
         """
         Calculates datum values
@@ -110,9 +134,21 @@ class TruncatedMC(Valuator):
             except:
                 print('Calculate leave-one-out')
                 self._calc_loo()
-            do_tmc = True
-            while do_tmc or do_gshap:
-                if do_gshap:
-                    pass
-                if do_tmc:
-                    pass
+
+        do_tmc = True
+        self.mem_tmc = np.zeros((0, self.num_data))
+        self.mem_gshap = np.zeros((0, self.num_data))
+        while do_tmc or do_gshap:
+            if do_gshap:
+                if utils.error(self.mem_gshap) < err:
+                    do_gshap = False
+                else:
+                    self._calc_gshap()
+                    self.vals_gshap = np.mean(self.mem_gshap, axis=0)
+            if do_tmc:
+                if utils.error(self.mem_tmc) < err:
+                    do_tmc = False
+                else:
+                    self._calc_tmcshap()
+                    self.vals_tmcshap = np.mean(self.mem_tmc, axis=0)
+            self.save_results()
