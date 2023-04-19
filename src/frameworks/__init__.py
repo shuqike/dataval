@@ -1,1 +1,1 @@
-from monte_carlo import TruncatedMC
+from src.frameworks.monte_carlo import TruncatedMC

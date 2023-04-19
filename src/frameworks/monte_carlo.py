@@ -1,12 +1,13 @@
 import numpy as np
 import torch
-import utils
+import src.utils as utils
 
 
 class TruncatedMC:
-    def __init__(self, X, y, X_test, y_test, sources=None, sample_weight=None,
-                 model_family='logistic', metric='accuracy', seed=None,
-                 directory=None, **kwargs) -> None:
+    def __init__(self, train_dataset, test_dataset,
+                 model_family, seed=None,
+                 perf_metric='accuracy',
+                 **kwargs) -> None:
         '''
         Args:
             X: Data covariates
@@ -28,24 +29,26 @@ class TruncatedMC:
         if seed is not None:
             np.random.seed(seed)
             torch.manual_seed(seed)
+        self.train_dataset = train_dataset
+        self.test_dataset = test_dataset
         self.model_family = model_family
         self.model = utils.return_model(self.model_family, **kwargs)
-        self.metric = metric
-        self.directory = directory
-        # Sanity check for single/multiclass label
-        if len(set(self.y)) > 2:
-            assert self.metric != 'f1', 'Invalid metric for multiclass!'
-            assert self.metric != 'auc', 'Invalid metric for multiclass!'
-        # Get the score of the initial model
-        self.random_score = self._init_score(self.metric)
+        self.perf_metric = perf_metric
 
-    def _init_score(self, metric):
+        # Sanity check for single/multiclass label
+        if len(self.test_dataset) > 2:
+            assert self.perf_metric != 'f1', 'Invalid metric for multiclass!'
+            assert self.perf_metric != 'auc', 'Invalid metric for multiclass!'
+
+        # Get the score of the initial model
+        self.random_score = self._init_score()
+
+    def _init_score(self):
         '''
         Get the score of the initial model
         '''
-        if metric == 'accuracy':
-            return self.model.score(self.X, self.y)
-        elif metric == 'f1':
-            return self.model.f1_score(self.X, self.y)
-        elif metric == 'auc':
-            return self.model.auc_score(self.X, self.y)
+        if self.perf_metric == 'accuracy':
+            hist = np.bincount(self.test_dataset['label']).astype(float) / len(self.test_dataset['label'])
+            return np.max(hist)
+        else:
+            raise NotImplementedError

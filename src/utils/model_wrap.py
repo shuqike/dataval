@@ -1,4 +1,4 @@
-import models
+import src.models as models
 from sklearn.linear_model import LogisticRegression
 
 
@@ -23,7 +23,7 @@ def return_model(model_family='logistic', **kwargs):
         model = models.ConvNeXTTiny(**kwargs)
     elif 'bert' in model_family:
         # examples of model_family: bert-base-uncased, bert-base-cased
-        model = models.Lancer(model_family, **kwargs)
+        model = models.Lancer(model_family=model_family, **kwargs)
     else:
         raise NotImplementedError
     return model

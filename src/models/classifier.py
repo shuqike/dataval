@@ -13,8 +13,13 @@ class Casifier:
         self._device = kwargs.get('device', 'cpu')
         self._scheduler_name = kwargs.get('scheduler_name', 'linear')
         self._num_warmup_steps = kwargs.get('num_warmup_steps', 0)
-        self._metric = evaluate.load(
+        # Train metric for recording training results
+        self._train_metric = evaluate.load(
             kwargs.get('train_metric', 'accuracy')
+        )
+        # Performance metric for data valuation
+        self._perf_metric = evaluate.load(
+            kwargs.get('perf_metric', 'accuracy')
         )
         self._logging_strategy  = kwargs.get('logging_strategy ', 'epoch')
         self._save_steps = kwargs.get('save_steps', 50)
@@ -38,10 +43,10 @@ class Casifier:
     def _preproc(self, X):
         return self._preprocessor(X, return_tensors="pt")
 
-    def _compute_metrics(self, eval_pred):
+    def _compute_train_metrics(self, eval_pred):
         logits, labels = eval_pred
         predictions = np.argmax(logits, axis=-1)
-        return self._metric.compute(
+        return self._train_metric.compute(
             predictions=predictions,
             references=labels
         )
@@ -55,6 +60,15 @@ class Casifier:
     def predict(self, x):
         return self._model(x)
 
+    def perf_metric(self, X, y):
+        outputs = self._model(**X)
+        logits = outputs.logits
+        y_hat = logits.argmax(-1).item()
+        return self._perf_metric.compute(
+            predictions=y_hat,
+            references=y
+        )
+
     def fit(self, train_dataset, eval_dataset=None):
         '''fit is an offline method
         '''
@@ -63,7 +77,7 @@ class Casifier:
             args=self._training_args,
             train_dataset=train_dataset,
             eval_dataset=eval_dataset,
-            compute_metrics=self._compute_metrics,
+            compute_metrics=self._compute_train_metrics,
         )
         trainer.train()
 
