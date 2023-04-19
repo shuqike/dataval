@@ -29,17 +29,13 @@ class TruncatedMC:
             np.random.seed(seed)
             torch.manual_seed(seed)
         self.model_family = model_family
+        self.model = utils.return_model(self.model_family, **kwargs)
         self.metric = metric
         self.directory = directory
-        # Hidden layer setting
-        self.hidden_units = kwargs.get('hidden_layer_sizes', [])
-        if self.model_family == 'logistic':
-            self.hidden_units = []
         # Sanity check for single/multiclass label
         if len(set(self.y)) > 2:
             assert self.metric != 'f1', 'Invalid metric for multiclass!'
             assert self.metric != 'auc', 'Invalid metric for multiclass!'
-        self.model = utils.return_model(self.model_family, **kwargs)
         # Get the score of the initial model
         self.random_score = self._init_score(self.metric)
 

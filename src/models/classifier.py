@@ -4,7 +4,7 @@ import evaluate
 from transformers import TrainingArguments, Trainer, AutoModelForSequenceClassification
 
 
-class Agent:
+class Casifier:
     def __init__(self, **kwargs) -> None:
         self._seed = kwargs.get('seed', 3407)
         self._max_epoch = kwargs.get('max_epoch', 100)
@@ -68,7 +68,7 @@ class Agent:
         trainer.train()
 
 
-class Lancer(Agent):
+class Lancer(Casifier):
     def __init__(self, **kwargs) -> None:
         num_labels = kwargs.get('num_labels')
         model_family = kwargs.get('model_family', 'bert-base-uncased')
