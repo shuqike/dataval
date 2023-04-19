@@ -1,5 +1,6 @@
 import numpy as np
 import torch
+import utils
 
 
 class TruncatedMC:
@@ -38,5 +39,5 @@ class TruncatedMC:
         if len(set(self.y)) > 2:
             assert self.metric != 'f1', 'Invalid metric for multiclass!'
             assert self.metric != 'auc', 'Invalid metric for multiclass!'
-        self.model = return_model(self.model_family, **kwargs)
+        self.model = utils.return_model(self.model_family, **kwargs)
         self.random_score = self.init_score(self.metric)

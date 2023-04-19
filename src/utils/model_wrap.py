@@ -1,4 +1,4 @@
-import models.pt_cnn
+import models
 from sklearn.linear_model import LogisticRegression
 
 
@@ -10,5 +10,21 @@ def return_model(model_family='logistic', **kwargs):
         model = LogisticRegression(solver=solver, n_jobs=n_jobs, 
                                    max_iter=max_iter, random_state=666)
     elif model_family == 'vit':
-        pass
+        pretrained = kwargs.get('pretrained', False)
+        model = models.ViTbp16(pretrained)
+    elif model_family == 'swin-tiny':
+        pretrained = kwargs.get('pretrained', False)
+        model = models.SwinTiny(pretrained)
+    elif model_family == 'mobilenet':
+        pretrained = kwargs.get('pretrained', False)
+        model = models.MobileNet(pretrained)
+    elif model_family == 'resnet-18':
+        pretrained = kwargs.get('pretrained', False)
+        model = models.ResNet18(pretrained)
+    elif model_family == 'resnet-50':
+        pretrained = kwargs.get('pretrained', False)
+        model = models.ResNet50(pretrained)
+    elif model_family == 'convnext-tiny':
+        pretrained = kwargs.get('pretrained', False)
+        model = models.ConvNeXTTiny(pretrained)
     return model

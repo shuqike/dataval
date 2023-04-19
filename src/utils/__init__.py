@@ -1,3 +1,1 @@
-import model_wrap
-import val_function
-import iterative_methods
+from model_wrap import return_model
