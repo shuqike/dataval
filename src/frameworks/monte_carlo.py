@@ -1,14 +1,16 @@
 import numpy as np
+from tqdm import tqdm
 import torch
+from datasets import Dataset
 from src.frameworks.valuator import Valuator
 import src.utils as utils
-from tqdm import tqdm
 
 
 class TruncatedMC(Valuator):
     def __init__(self,
                  model_family,
                  train_dataset,
+                 X_train,
                  test_dataset,
                  sources=None,
                  seed=None,
@@ -34,10 +36,6 @@ class TruncatedMC(Valuator):
         """
 
         # Sanity check for datasets
-        assert 'feature' in train_dataset,\
-            'Cannot find "feature" in the training dataset dictionary'
-        assert 'feature' in test_dataset,\
-            'Cannot find "feature" in the testing dataset dictionary'
         if len(test_dataset) > 2:
             assert perf_metric != 'f1', 'Invalid metric for multiclass!'
             assert perf_metric != 'auc', 'Invalid metric for multiclass!'
@@ -48,7 +46,8 @@ class TruncatedMC(Valuator):
             torch.manual_seed(seed)
         self.sources = sources
         self.train_dataset = train_dataset
-        self.num_data = len(self.train_dataset['feature'])
+        self.X_train = X_train
+        self.num_data = len(self.X_train)
         self.test_dataset = test_dataset
 
         # Prepare model
@@ -81,14 +80,13 @@ class TruncatedMC(Valuator):
         baseline_val = self.model.perf_metric(self.test_dataset)
         self.vals_loo = np.zeros(self.num_data)
         for i in tqdm(self.sources.keys()):
-            X_batch = np.delete(self.train_dataset['feature'], self.sources[i], axis=0)
+            X_batch = np.delete(self.X_train, self.sources[i], axis=0)
             y_batch = np.delete(self.train_dataset['label'], self.sources[i], axis=0)
             self.model.reset()
             self.model.fit(
-                train_dataset={
-                    'feature': X_batch,
-                    'label': y_batch
-                }
+                train_dataset=Dataset.from_dict(
+                    {'feature': X_batch, 'label': y_batch}
+                )
             )
             removed_val = self.model.perf_metric(self.test_dataset)
             self.vals_loo[sources[i]] = (baseline_val - removed_val)

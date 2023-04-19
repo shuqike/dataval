@@ -6,11 +6,11 @@ from transformers import TrainingArguments, Trainer, AutoModelForSequenceClassif
 
 class Casifier:
     def _get_model(self): raise NotImplementedError
-    def _get_processor(self): raise NotImplementedError
+    def _get_processor(self): self._processor = lambda X, **kwargs : X
 
     def __init__(self, **kwargs) -> None:
-        self._processor = self._get_model()
-        self._model = self._get_processor()
+        self._get_model()
+        self._get_processor()
         self._seed = kwargs.get('seed', 3407)
         self._max_epoch = kwargs.get('max_epoch', 100)
         self._batch_size = kwargs.get('batch_size', 64)
@@ -98,7 +98,7 @@ class Casifier:
 
 class Lancer(Casifier):
     def _get_model(self):
-        return AutoModelForSequenceClassification.from_pretrained(self._model_family, num_labels=self._num_labels)
+        self._model = AutoModelForSequenceClassification.from_pretrained(self._model_family, num_labels=self._num_labels)
 
     def __init__(self, **kwargs) -> None:
         self._num_labels = kwargs.get('num_labels')
