@@ -2,7 +2,7 @@ import numpy as np
 
 
 def error(mem):
-    """Evaluate
+    """Evaluate the changes of the most recent 100 updates
     """
     if len(mem) < 100:
         return 1.0
