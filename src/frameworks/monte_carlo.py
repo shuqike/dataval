@@ -40,4 +40,16 @@ class TruncatedMC:
             assert self.metric != 'f1', 'Invalid metric for multiclass!'
             assert self.metric != 'auc', 'Invalid metric for multiclass!'
         self.model = utils.return_model(self.model_family, **kwargs)
-        self.random_score = self.init_score(self.metric)
+        # Get the score of the initial model
+        self.random_score = self._init_score(self.metric)
+
+    def _init_score(self, metric):
+        '''
+        Get the score of the initial model
+        '''
+        if metric == 'accuracy':
+            return self.model.score(self.X, self.y)
+        elif metric == 'f1':
+            return self.model.f1_score(self.X, self.y)
+        elif metric == 'auc':
+            return self.model.auc_score(self.X, self.y)
