@@ -43,6 +43,7 @@ We compare the time and memory consumption of different setting pairs:
 2. [Flink](https://flink.apache.org/). Apache Flink is a framework and distributed processing engine for stateful computations over unbounded and bounded data streams.
 3. [BARS Benchmark](https://openbenchmark.github.io/BARS/index.html#). BARS is a large, open benchmark for recommender systems.
 4. [DeepCTR](https://github.com/shenweichen/DeepCTR). DeepCTR is a easy-to-use, modular and extendible package of deep-learning based CTR(Clickthrough rate prediction) models along with lots of core components layers which can be used to easily build custom models.
+5. [TweetNLP](https://tweetnlp.org/).
 
 ## Dataset pool
 
@@ -74,6 +75,13 @@ We compare the time and memory consumption of different setting pairs:
 | Dataset | Timestamp | Timespan |
 | ------- | --------- | -------- |
 | [CSE-CIC-IDS2018 on AWS](https://www.unb.ca/cic/datasets/ids-2018.html) | NaN | 1-2days |
+
+### Synthetic dataset from classical benchmarks
+
+| Dataset | Timestamp | Timespan |
+| ------- | --------- | -------- |
+| imagenet-1k | minutes | 17hours |
+| tweet_eval | seconds | NaN |
 
 ## References
 
