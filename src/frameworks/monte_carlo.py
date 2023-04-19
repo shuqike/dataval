@@ -45,6 +45,12 @@ class TruncatedMC(Valuator):
             np.random.seed(seed)
             torch.manual_seed(seed)
         self.sources = sources
+        if sources is None:
+            # Each datum has its own source
+            sources = {i:np.array([i]) for i in range(len(self.X))}
+        elif not isinstance(sources, dict):
+            # Set down the given sources as a dict
+            sources = {i:np.where(sources==i)[0] for i in set(sources)}
         self.train_dataset = train_dataset
         self.X_train = X_train
         self.num_data = len(self.X_train)
@@ -54,6 +60,9 @@ class TruncatedMC(Valuator):
         self.model_family = model_family
         self.model = utils.return_model(self.model_family, **kwargs)
         self.perf_metric = perf_metric
+
+        # Prepare valuation hyper-parameters
+        self.g_shap_lr = kwargs.get('g_shap_lr', None)
 
         # Get the score of the initial model
         self.random_score = self._init_score()
@@ -70,12 +79,6 @@ class TruncatedMC(Valuator):
     def _calc_loo(self):
         """Calculate leave-one-out values for the given metric.
         """
-        if sources is None:
-            # Each datum has its own source
-            sources = {i:np.array([i]) for i in range(len(self.X))}
-        elif not isinstance(sources, dict):
-            # Set down the given sources as a dict
-            sources = {i:np.where(sources==i)[0] for i in set(sources)}
         self.model.fit(self.train_dataset, self.test_dataset)
         baseline_val = self.model.perf_metric(self.test_dataset)
         self.vals_loo = np.zeros(self.num_data)
@@ -89,8 +92,8 @@ class TruncatedMC(Valuator):
                 )
             )
             removed_val = self.model.perf_metric(self.test_dataset)
-            self.vals_loo[sources[i]] = (baseline_val - removed_val)
-            self.vals_loo[sources[i]] /= len(sources[i])
+            self.vals_loo[self.sources[i]] = (baseline_val - removed_val)
+            self.vals_loo[self.sources[i]] /= len(self.sources[i])
 
     def _calc_gshap(self):
         """Method for running G-Shapley algorithm.
@@ -100,7 +103,8 @@ class TruncatedMC(Valuator):
             learning_rate: Learning rate used for the algorithm. If None calculates the best learning rate.
             sources: If values are for sources of data points rather than individual points. In the format of an assignment array or dict.
         """
-        raise NotImplementedError
+        if self.g_shap_lr is None:
+            pass
 
     def _calc_tmcshap(self):
         """Runs TMC-Shapley algorithm.
