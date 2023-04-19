@@ -52,6 +52,9 @@ class Agent:
         logits = outputs.logits
         return logits.argmax(-1).item()
 
+    def predict(self, x):
+        return self._model(x)
+
     def fit(self, train_dataset, eval_dataset=None):
         '''fit is an offline method
         '''

@@ -21,4 +21,9 @@ def return_model(model_family='logistic', **kwargs):
         model = models.ResNet50(**kwargs)
     elif model_family == 'convnext-tiny':
         model = models.ConvNeXTTiny(**kwargs)
+    elif 'bert' in model_family:
+        # examples of model_family: bert-base-uncased, bert-base-cased
+        model = models.Lancer(model_family, **kwargs)
+    else:
+        raise NotImplementedError
     return model

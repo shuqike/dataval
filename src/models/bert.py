@@ -1,30 +1,13 @@
-from transformers import AutoModelForSequenceClassification, TFAutoModelForSequenceClassification, AutoTokenizer
-from scipy.special import softmax
+from agent import Agent
+from transformers import AutoModelForSequenceClassification
 
 
-def preprocess(text):
-    new_text = []
- 
- 
-    for t in text.split(" "):
-        t = '@user' if t.startswith('@') and len(t) > 1 else t
-        t = 'http' if t.startswith('http') else t
-        new_text.append(t)
-    return " ".join(new_text)
+class Lancer(Agent):
+    def __init__(self, **kwargs) -> None:
+        num_labels = kwargs.get('num_labels')
+        model_family = kwargs.get('model_family', 'bert-base-uncased')
+        self._model = AutoModelForSequenceClassification.from_pretrained(model_family, num_labels=num_labels)
+        super().__init__(**kwargs)
 
-
-class Tweet_roBERTa_base:
-    def __init__(self, pretrained=False, task='sentiment') -> None:
-        MODEL = f"cardiffnlp/twitter-roberta-base-{task}"
-        self._tokenizer = AutoTokenizer.from_pretrained(MODEL)
-        self._model = AutoModelForSequenceClassification.from_pretrained(MODEL)
-
-    def predict(self, texts):
-        encoded_inputs = [
-            self._tokenizer(
-                preprocess(text),
-                return_tensors='pt'
-            )
-            for text in texts
-        ]
-        outputs = self._model(**encoded_inputs)
+    def raw_predict(self, X):
+        raise NotImplementedError
