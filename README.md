@@ -93,3 +93,6 @@ We compare the time and memory consumption of different setting pairs:
 5. [Machine learning is going real-time](https://huyenchip.com/2020/12/27/real-time-machine-learning.html)
 6. [Real-time machine learning: challenges and solutions, 2022](https://huyenchip.com/2022/01/02/real-time-machine-learning-challenges-and-solutions.html)
 7. [Threat Detection Using Pinecone](https://docs.pinecone.io/docs/it-threat-detection)
+8. [Continual Learning Course](https://course.continualai.org/)
+9. [Continual Learning Papers](https://github.com/ContinualAI/continual-learning-papers)
+10. [A Comprehensive Survey of Continual Learning: Theory, Method and Application](https://arxiv.org/abs/2302.00487)
