@@ -14,6 +14,7 @@ class TruncatedMC(StaticValuator):
                  model_family,
                  train_dataset,
                  X_train,
+                 X_test,
                  test_dataset,
                  sources=None,
                  seed=None,
@@ -47,15 +48,16 @@ class TruncatedMC(StaticValuator):
         if seed is not None:
             np.random.seed(seed)
             torch.manual_seed(seed)
+        self.X_train = X_train
+        self.X_test = X_test
         if sources is None:
             # Each datum has its own source
-            sources = {i:np.array([i]) for i in range(len(self.X))}
+            sources = {i:np.array([i]) for i in range(len(self.X_train))}
         elif not isinstance(sources, dict):
             # Set down the given sources as a dict
             sources = {i:np.where(sources==i)[0] for i in set(sources)}
         self.sources = sources
         self.train_dataset = train_dataset
-        self.X_train = X_train
         self.num_data = len(self.X_train)
         self.test_dataset = test_dataset
 
@@ -104,13 +106,13 @@ class TruncatedMC(StaticValuator):
         scores = []
         self.model.reset()
         for _ in range(1):
-            self.model.fit(self.X, self.y)
+            self.model.fit(self.X_train, self.train_dataset['label'])
             for __ in range(100):
                 bag_idxs = np.random.choice(len(self.y_test), len(self.y_test))
                 scores.append(
                     self.model.perf_metric(
                         Dataset.from_dict(
-                           {'feature': self.X_test[bag_idxs], 'label': self.y_test[bag_idxs]}
+                           {'feature': self.X_test[bag_idxs], 'label': self.test_dataset['label'][bag_idxs]}
                         )
                     )
                 )
@@ -120,16 +122,16 @@ class TruncatedMC(StaticValuator):
         """Iterate once for tmc-shapley algorithm
         """
         idxs = np.random.permutation(len(self.sources))
-        marginal_contribs = np.zeros(len(self.X))
-        X_batch = np.zeros((0,) + tuple(self.X.shape[1:]))
+        marginal_contribs = np.zeros(len(self.X_train))
+        X_batch = np.zeros((0,) + tuple(self.X_train.shape[1:]))
         y_batch = np.zeros(0, int)
         truncation_counter = 0
         new_score = self.random_score
         for idx in tqdm(idxs):
             old_score = new_score
-            X_batch = np.concatenate([X_batch, self.X[self.sources[idx]]])
-            y_batch = np.concatenate([y_batch, self.y[self.sources[idx]]])
-            if len(set(y_batch)) == len(set(self.y_test)):
+            X_batch = np.concatenate([X_batch, self.X_train[self.sources[idx]]])
+            y_batch = np.concatenate([y_batch, self.train_dataset['label'][self.sources[idx]]])
+            if len(set(y_batch)) == len(set(self.test_dataset['label'])):
                 self.model.reset()
                 self.model.fit(
                     train_dataset=Dataset.from_dict(
@@ -211,7 +213,7 @@ class TruncatedMC(StaticValuator):
             val_result = self._gshap_iter(perm_idxs)
             marginal_contribs[1:] += val_result[0][1:]
             marginal_contribs[1:] -= val_result[0][:-1]
-            individual_contribs = np.zeros(len(self.X))
+            individual_contribs = np.zeros(len(self.X_train))
             for i, idx in enumerate(perm_idxs):
                 individual_contribs[self.sources[idx]] += marginal_contribs[i]
                 individual_contribs[self.sources[idx]] /= len(self.sources[idx])
