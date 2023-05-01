@@ -44,13 +44,13 @@ class TruncatedMC(StaticValuator):
         if seed is not None:
             np.random.seed(seed)
             torch.manual_seed(seed)
-        self.sources = sources
         if sources is None:
             # Each datum has its own source
             sources = {i:np.array([i]) for i in range(len(self.X))}
         elif not isinstance(sources, dict):
             # Set down the given sources as a dict
             sources = {i:np.where(sources==i)[0] for i in set(sources)}
+        self.sources = sources
         self.train_dataset = train_dataset
         self.X_train = X_train
         self.num_data = len(self.X_train)
@@ -76,6 +76,91 @@ class TruncatedMC(StaticValuator):
         else:
             raise NotImplementedError
 
+    def _calc_loo(self):
+        """Calculate leave-one-out values for the given metric.
+        """
+        self.model.reset()
+        self.model.fit(self.train_dataset, self.test_dataset)
+        baseline_val = self.model.perf_metric(self.test_dataset)
+        self.vals_loo = np.zeros(self.num_data)
+        for i in tqdm(self.sources.keys()):
+            X_batch = np.delete(self.X_train, self.sources[i], axis=0)
+            y_batch = np.delete(self.train_dataset['label'], self.sources[i], axis=0)
+            self.model.reset()
+            self.model.fit(
+                train_dataset=Dataset.from_dict(
+                    {'feature': X_batch, 'label': y_batch}
+                )
+            )
+            removed_val = self.model.perf_metric(self.test_dataset)
+            self.vals_loo[self.sources[i]] = (baseline_val - removed_val)
+            self.vals_loo[self.sources[i]] /= len(self.sources[i])
+
+    def _tmc_iter(self, tol):
+        """Iterate once for tmc-shapley algorithm
+        """
+        idxs = np.random.permutation(len(self.sources))
+        marginal_contribs = np.zeros(len(self.X))
+        X_batch = np.zeros((0,) + tuple(self.X.shape[1:]))
+        y_batch = np.zeros(0, int)
+        sample_weight_batch = np.zeros(0)
+        truncation_counter = 0
+        new_score = self.random_score
+        for n, idx in enumerate(idxs):
+            old_score = new_score
+            X_batch = np.concatenate([X_batch, self.X[self.sources[idx]]])
+            y_batch = np.concatenate([y_batch, self.y[self.sources[idx]]])
+            if self.sample_weight is None:
+                sample_weight_batch = None
+            else:
+                sample_weight_batch = np.concatenate([
+                    sample_weight_batch,
+                    self.sample_weight[sources[idx]]
+                ])
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                if (self.is_regression
+                    or len(set(y_batch)) == len(set(self.y_test))): ##FIXIT
+                    self.restart_model()
+                    if sample_weight_batch is None:
+                        self.model.fit(X_batch, y_batch)
+                    else:
+                        self.model.fit(
+                            X_batch,
+                            y_batch,
+                            sample_weight = sample_weight_batch
+                        )
+                    new_score = self.value(self.model, metric=self.metric)
+            marginal_contribs[sources[idx]] = (new_score - old_score)
+            marginal_contribs[sources[idx]] /= len(sources[idx])
+            distance_to_full_score = np.abs(new_score - self.mean_score)
+            if distance_to_full_score <= tol * self.mean_score:
+                truncation_counter += 1
+                if truncation_counter > 5:
+                    break
+            else:
+                truncation_counter = 0
+        return marginal_contribs, idxs
+
+    def _calc_tmcshap(self, num_iter, tol):
+        """Runs TMC-Shapley algorithm.
+        Args:
+            iterations: Number of iterations to run.
+            tolerance: Truncation tolerance ratio.
+            sources: If values are for sources of data points rather than individual points. In the format of an assignment array or dict.
+        """
+        marginals, idxs = [], []
+        for _ in range(num_iter):
+            marginals, idxs = self._tmc_iter(tol)
+            self.mem_tmc = np.concatenate([
+                self.mem_tmc, 
+                np.reshape(marginals, (1,-1))
+            ])
+            self.idxs_tmc = np.concatenate([
+                self.idxs_tmc, 
+                np.reshape(idxs, (1,-1))
+            ])
+
     def _calc_gshap(self):
         """Method for running G-Shapley algorithm.
         Args:
@@ -87,37 +172,12 @@ class TruncatedMC(StaticValuator):
         if self.g_shap_lr is None:
             pass
 
-    def _calc_tmcshap(self, num_iter, tol):
-        """Runs TMC-Shapley algorithm.
-        Args:
-            iterations: Number of iterations to run.
-            tolerance: Truncation tolerance ratio.
-            sources: If values are for sources of data points rather than individual points. In the format of an assignment array or dict.
-        """
-        marginals, idxs = [], []
-        for iteration in range(num_iter):
-            # if 10*(iteration+1)/iterations % 1 == 0:
-            #     print('{} out of {} TMC_Shapley iterations.'.format(
-            #         iteration + 1, iterations))
-            marginals, idxs = self.one_iteration(tol)
-            self.mem_tmc = np.concatenate([
-                self.mem_tmc, 
-                np.reshape(marginals, (1,-1))
-            ])
-            self.idxs_tmc = np.concatenate([
-                self.idxs_tmc, 
-                np.reshape(idxs, (1,-1))
-            ])
-
-    def one_iteration(self, tol):
-        """Iterate once for tmc-shapley algorithm"""
-
     def save_results(self):
         """Saves results computed so far.
         """
         raise NotImplementedError
 
-    def run(self, save_every, err, tol=1e-2, do_gshap=True, do_loo=False):
+    def run(self, save_every, err, tol=1e-2, do_tmc = True, do_gshap=False, do_loo=False):
         """
         Calculates datum values
         Args:
@@ -134,7 +194,6 @@ class TruncatedMC(StaticValuator):
                 print('Calculate leave-one-out')
                 self._calc_loo()
 
-        do_tmc = True
         self.mem_tmc = np.zeros((0, self.num_data))
         self.mem_gshap = np.zeros((0, self.num_data))
         while do_tmc or do_gshap:
