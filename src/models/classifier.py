@@ -28,7 +28,7 @@ class Casifier:
         self._perf_metric = evaluate.load(
             kwargs.get('perf_metric', 'accuracy')
         )
-        self._logging_strategy  = kwargs.get('logging_strategy ', 'epoch')
+        self._logging_strategy  = kwargs.get('logging_strategy ', 'no')
         self._save_steps = kwargs.get('save_steps', 50)
         self._training_args = TrainingArguments(
             output_dir="test_trainer",
