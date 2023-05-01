@@ -24,8 +24,6 @@ class TruncatedMC(StaticValuator):
             y_test: Test+Held-out labels
             sources: An array or dictionary assiging each point to its group.
                 If None, evey points gets its individual value
-            samples_weights: Weight of train samples in the loss function
-                (for models where weighted training method is enabled.)
             model_family: The model family used for learning algorithm
             metric: Evaluation metric
             seed: Random seed. When running parallel monte-carlo samples,
@@ -96,6 +94,23 @@ class TruncatedMC(StaticValuator):
             self.vals_loo[self.sources[i]] = (baseline_val - removed_val)
             self.vals_loo[self.sources[i]] /= len(self.sources[i])
 
+    def _tol_mean_score(self):
+        """Computes the average performance and its error using bagging."""
+        scores = []
+        self.model.reset()
+        for _ in range(1):
+            self.model.fit(self.X, self.y)
+            for __ in range(100):
+                bag_idxs = np.random.choice(len(self.y_test), len(self.y_test))
+                scores.append(
+                    self.model.perf_metric(
+                        Dataset.from_dict(
+                           {'feature': self.X_test[bag_idxs], 'label': self.y_test[bag_idxs]}
+                        )
+                    )
+                )
+        self.mean_score = np.mean(scores)
+
     def _tmc_iter(self, tol):
         """Iterate once for tmc-shapley algorithm
         """
@@ -103,36 +118,18 @@ class TruncatedMC(StaticValuator):
         marginal_contribs = np.zeros(len(self.X))
         X_batch = np.zeros((0,) + tuple(self.X.shape[1:]))
         y_batch = np.zeros(0, int)
-        sample_weight_batch = np.zeros(0)
         truncation_counter = 0
         new_score = self.random_score
-        for n, idx in enumerate(idxs):
+        for idx in tqdm(idxs):
             old_score = new_score
             X_batch = np.concatenate([X_batch, self.X[self.sources[idx]]])
             y_batch = np.concatenate([y_batch, self.y[self.sources[idx]]])
-            if self.sample_weight is None:
-                sample_weight_batch = None
-            else:
-                sample_weight_batch = np.concatenate([
-                    sample_weight_batch,
-                    self.sample_weight[sources[idx]]
-                ])
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore")
-                if (self.is_regression
-                    or len(set(y_batch)) == len(set(self.y_test))): ##FIXIT
-                    self.restart_model()
-                    if sample_weight_batch is None:
-                        self.model.fit(X_batch, y_batch)
-                    else:
-                        self.model.fit(
-                            X_batch,
-                            y_batch,
-                            sample_weight = sample_weight_batch
-                        )
-                    new_score = self.value(self.model, metric=self.metric)
-            marginal_contribs[sources[idx]] = (new_score - old_score)
-            marginal_contribs[sources[idx]] /= len(sources[idx])
+            if len(set(y_batch)) == len(set(self.y_test)):
+                self.model.reset()
+                self.model.fit(X_batch, y_batch)
+                new_score = self.value(self.model, metric=self.metric)
+            marginal_contribs[self.sources[idx]] = (new_score - old_score)
+            marginal_contribs[self.sources[idx]] /= len(self.sources[idx])
             distance_to_full_score = np.abs(new_score - self.mean_score)
             if distance_to_full_score <= tol * self.mean_score:
                 truncation_counter += 1
@@ -149,6 +146,10 @@ class TruncatedMC(StaticValuator):
             tolerance: Truncation tolerance ratio.
             sources: If values are for sources of data points rather than individual points. In the format of an assignment array or dict.
         """
+        try:
+            self.mean_score
+        except:
+            self._tol_mean_score()
         marginals, idxs = [], []
         for _ in range(num_iter):
             marginals, idxs = self._tmc_iter(tol)
@@ -191,7 +192,7 @@ class TruncatedMC(StaticValuator):
             try:
                 len(self.vals_loo)
             except:
-                print('Calculate leave-one-out')
+                tqdm.write('Calculate leave-one-out')
                 self._calc_loo()
 
         self.mem_tmc = np.zeros((0, self.num_data))
