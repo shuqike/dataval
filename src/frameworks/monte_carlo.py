@@ -2,11 +2,11 @@ import numpy as np
 from tqdm import tqdm
 import torch
 from datasets import Dataset
-from src.frameworks.valuator import Valuator
+from src.frameworks.valuator import StaticValuator
 import src.utils as utils
 
 
-class TruncatedMC(Valuator):
+class TruncatedMC(StaticValuator):
     def __init__(self,
                  model_family,
                  train_dataset,
@@ -76,26 +76,6 @@ class TruncatedMC(Valuator):
         else:
             raise NotImplementedError
 
-    def _calc_loo(self):
-        """Calculate leave-one-out values for the given metric.
-        """
-        self.model.reset()
-        self.model.fit(self.train_dataset, self.test_dataset)
-        baseline_val = self.model.perf_metric(self.test_dataset)
-        self.vals_loo = np.zeros(self.num_data)
-        for i in tqdm(self.sources.keys()):
-            X_batch = np.delete(self.X_train, self.sources[i], axis=0)
-            y_batch = np.delete(self.train_dataset['label'], self.sources[i], axis=0)
-            self.model.reset()
-            self.model.fit(
-                train_dataset=Dataset.from_dict(
-                    {'feature': X_batch, 'label': y_batch}
-                )
-            )
-            removed_val = self.model.perf_metric(self.test_dataset)
-            self.vals_loo[self.sources[i]] = (baseline_val - removed_val)
-            self.vals_loo[self.sources[i]] /= len(self.sources[i])
-
     def _calc_gshap(self):
         """Method for running G-Shapley algorithm.
         Args:
@@ -107,14 +87,30 @@ class TruncatedMC(Valuator):
         if self.g_shap_lr is None:
             pass
 
-    def _calc_tmcshap(self):
+    def _calc_tmcshap(self, num_iter, tol):
         """Runs TMC-Shapley algorithm.
         Args:
             iterations: Number of iterations to run.
             tolerance: Truncation tolerance ratio.
             sources: If values are for sources of data points rather than individual points. In the format of an assignment array or dict.
         """
-        raise NotImplementedError
+        marginals, idxs = [], []
+        for iteration in range(num_iter):
+            # if 10*(iteration+1)/iterations % 1 == 0:
+            #     print('{} out of {} TMC_Shapley iterations.'.format(
+            #         iteration + 1, iterations))
+            marginals, idxs = self.one_iteration(tol)
+            self.mem_tmc = np.concatenate([
+                self.mem_tmc, 
+                np.reshape(marginals, (1,-1))
+            ])
+            self.idxs_tmc = np.concatenate([
+                self.idxs_tmc, 
+                np.reshape(idxs, (1,-1))
+            ])
+
+    def one_iteration(self, tol):
+        """Iterate once for tmc-shapley algorithm"""
 
     def save_results(self):
         """Saves results computed so far.
@@ -125,7 +121,7 @@ class TruncatedMC(Valuator):
         """
         Calculates datum values
         Args:
-            save_every: save marginal contrivbutions every n iterations
+            save_every: save marginal contributions every n iterations
             err: stopping criteria
             tol: truncation tolerance. If None, it's computed
             gshap: whether to use G-Shapley to compute marginal contributions
@@ -146,12 +142,12 @@ class TruncatedMC(Valuator):
                 if utils.error(self.mem_gshap) < err:
                     do_gshap = False
                 else:
-                    self._calc_gshap()
+                    self._calc_gshap(save_every, tol)
                     self.vals_gshap = np.mean(self.mem_gshap, axis=0)
             if do_tmc:
                 if utils.error(self.mem_tmc) < err:
                     do_tmc = False
                 else:
-                    self._calc_tmcshap()
+                    self._calc_tmcshap(save_every, tol)
                     self.vals_tmcshap = np.mean(self.mem_tmc, axis=0)
             self.save_results()
