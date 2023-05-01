@@ -255,9 +255,7 @@ class TruncatedMC(StaticValuator):
             loo: whether to use Leave-One-Out to compute marginal contributions
         """
         if do_loo:
-            try:
-                len(self.vals_loo)
-            except:
+            if hasattr(self, 'vals_loo') == False:
                 tqdm.write('Calculate leave-one-out')
                 self._calc_loo()
 

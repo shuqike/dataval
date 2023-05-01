@@ -64,7 +64,7 @@ class Casifier:
         return self._device
 
     def reset(self):
-        self._model = self._get_model()
+        self._get_model()
         # Re-initialize weights for data valuation
         if self._pretrained is False:
             self._model.init_weights()
