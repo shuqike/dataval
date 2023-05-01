@@ -79,6 +79,7 @@ class TruncatedMC(Valuator):
     def _calc_loo(self):
         """Calculate leave-one-out values for the given metric.
         """
+        self.model.reset()
         self.model.fit(self.train_dataset, self.test_dataset)
         baseline_val = self.model.perf_metric(self.test_dataset)
         self.vals_loo = np.zeros(self.num_data)
@@ -132,7 +133,7 @@ class TruncatedMC(Valuator):
         """
         if do_loo:
             try:
-                len(self._loo_vals)
+                len(self.vals_loo)
             except:
                 print('Calculate leave-one-out')
                 self._calc_loo()
