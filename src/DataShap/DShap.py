@@ -454,6 +454,7 @@ class DShap(object):
                       sources=sources, metric=self.metric, 
                       max_epochs=1, batch_size=1)
             val_result = model.history['metrics']
+            # marginal_contribs[i] = val_r[0][i+1] - val_r[0][i]
             marginal_contribs[1:] += val_result[0][1:]
             marginal_contribs[1:] -= val_result[0][:-1]
             individual_contribs = np.zeros(len(self.X))

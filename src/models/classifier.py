@@ -5,6 +5,8 @@ from transformers import TrainingArguments, Trainer, AutoModelForSequenceClassif
 
 
 class Casifier:
+    """General classifier class
+    """
     def _get_model(self): raise NotImplementedError
     def _get_processor(self): self._processor = lambda X, **kwargs : X
 
@@ -58,6 +60,9 @@ class Casifier:
             references=labels
         )
 
+    def get_device(self):
+        return self._device
+
     def reset(self):
         self._model = self._get_model()
         # Re-initialize weights for data valuation
@@ -83,20 +88,31 @@ class Casifier:
             references=eval_dataset['label']
         )
 
-    def fit(self, train_dataset, eval_dataset=None):
+    def fit(self, train_dataset, eval_dataset=None, training_args=None):
         """'fit' is an offline method.
         """
-        self._trainer = Trainer(
-            model=self._model,
-            args=self._training_args,
-            train_dataset=train_dataset,
-            eval_dataset=eval_dataset,
-            compute_metrics=self._compute_train_metrics,
-        )
+        if training_args is None:
+            self._trainer = Trainer(
+                model=self._model,
+                args=self._training_args,
+                train_dataset=train_dataset,
+                eval_dataset=eval_dataset,
+                compute_metrics=self._compute_train_metrics,
+            )
+        else:
+            self._trainer = Trainer(
+                model=self._model,
+                args=training_args,
+                train_dataset=train_dataset,
+                eval_dataset=eval_dataset,
+                compute_metrics=self._compute_train_metrics,
+            )
         self._trainer.train()
 
 
 class Lancer(Casifier):
+    """Language models for classification
+    """
     def _get_model(self):
         self._model = AutoModelForSequenceClassification.from_pretrained(self._model_family, num_labels=self._num_labels)
 

@@ -2,6 +2,7 @@ import numpy as np
 from tqdm import tqdm
 import torch
 from datasets import Dataset
+from transformers import get_scheduler
 from src.frameworks.valuator import StaticValuator
 import src.utils as utils
 
@@ -37,6 +38,9 @@ class TruncatedMC(StaticValuator):
         if len(test_dataset) > 2:
             assert perf_metric != 'f1', 'Invalid metric for multiclass!'
             assert perf_metric != 'auc', 'Invalid metric for multiclass!'
+
+        # Record parameters
+        self.kwargs = kwargs
 
         # Prepare datasets
         if seed is not None:
@@ -126,8 +130,12 @@ class TruncatedMC(StaticValuator):
             y_batch = np.concatenate([y_batch, self.y[self.sources[idx]]])
             if len(set(y_batch)) == len(set(self.y_test)):
                 self.model.reset()
-                self.model.fit(X_batch, y_batch)
-                new_score = self.value(self.model, metric=self.metric)
+                self.model.fit(
+                    train_dataset=Dataset.from_dict(
+                        {'feature': X_batch, 'label': y_batch}
+                    )
+                )
+                new_score = self.model.perf_metric(self.test_dataset)
             marginal_contribs[self.sources[idx]] = (new_score - old_score)
             marginal_contribs[self.sources[idx]] /= len(self.sources[idx])
             distance_to_full_score = np.abs(new_score - self.mean_score)
@@ -142,9 +150,8 @@ class TruncatedMC(StaticValuator):
     def _calc_tmcshap(self, num_iter, tol):
         """Runs TMC-Shapley algorithm.
         Args:
-            iterations: Number of iterations to run.
-            tolerance: Truncation tolerance ratio.
-            sources: If values are for sources of data points rather than individual points. In the format of an assignment array or dict.
+            num_iter: Number of iterations to run.
+            tol: Truncation tolerance ratio.
         """
         try:
             self.mean_score
@@ -161,19 +168,61 @@ class TruncatedMC(StaticValuator):
                 self.idxs_tmc, 
                 np.reshape(idxs, (1,-1))
             ])
+        self.vals_tmcshap = np.mean(self.mem_tmc, axis=0)
 
-    def _calc_gshap(self):
+    def _get_gshap_lr(self):
+        return 1e-3
+
+    def _gshap_iter(self, perm_idxs):
+        """Iterate once for gradient-shapley algorithm
+        """
+        val_result = []
+        optimizer = torch.optim.SGD(self.model.parameters(), lr=self.g_shap_lr)
+        for i in tqdm(perm_idxs):
+            self.model._model.train()
+            outputs = self.model._model(self.X_train[self.sources[i]], self.train_dataset['label'][self.sources[i]])
+            loss = outputs.loss
+            loss.backward()
+            optimizer.step()
+            optimizer.zero_grad()
+            self.model._model.eval()
+            val_result.append(self.model.perf_metric(self.test_dataset))
+        return np.asarray(val_result)
+
+    def _calc_gshap(self, num_iter):
         """Method for running G-Shapley algorithm.
         Args:
-            iterations: Number of iterations of the algorithm.
+            num_iter: Number of iterations of the algorithm.
             err: Stopping error criteria
             learning_rate: Learning rate used for the algorithm. If None calculates the best learning rate.
-            sources: If values are for sources of data points rather than individual points. In the format of an assignment array or dict.
         """
         if self.g_shap_lr is None:
-            pass
+            self.g_shap_lr = self._get_gshap_lr()
+        for _ in range(num_iter):
+            # initialize parameters
+            self.model.reset()
+            # initialize marginal contributions
+            marginal_contribs = np.zeros(len(self.sources.keys()))
+            # random permutation of train data points
+            perm_idxs = list(self.sources.keys())
+            np.random.shuffle(perm_idxs)
+            # Get valuation at each training epoch
+            val_result = self._gshap_iter(perm_idxs)
+            marginal_contribs[1:] += val_result[0][1:]
+            marginal_contribs[1:] -= val_result[0][:-1]
+            individual_contribs = np.zeros(len(self.X))
+            for i, idx in enumerate(perm_idxs):
+                individual_contribs[self.sources[idx]] += marginal_contribs[i]
+                individual_contribs[self.sources[idx]] /= len(self.sources[idx])
+            self.mem_g = np.concatenate(
+                [self.mem_g, np.reshape(individual_contribs, (1,-1))]
+            )
+            self.idxs_g = np.concatenate(
+                [self.idxs_g, np.reshape(perm_idxs, (1,-1))]
+            )
+        self.vals_gshap = np.mean(self.mem_gshap, axis=0)
 
-    def save_results(self):
+    def _save_results(self):
         """Saves results computed so far.
         """
         raise NotImplementedError
@@ -203,11 +252,9 @@ class TruncatedMC(StaticValuator):
                     do_gshap = False
                 else:
                     self._calc_gshap(save_every, tol)
-                    self.vals_gshap = np.mean(self.mem_gshap, axis=0)
             if do_tmc:
                 if utils.error(self.mem_tmc) < err:
                     do_tmc = False
                 else:
                     self._calc_tmcshap(save_every, tol)
-                    self.vals_tmcshap = np.mean(self.mem_tmc, axis=0)
-            self.save_results()
+            self._save_results()
