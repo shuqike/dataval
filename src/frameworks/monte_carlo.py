@@ -16,20 +16,17 @@ class TruncatedMC(StaticValuator):
                  sources=None,
                  seed=None,
                  perf_metric='accuracy',
+                 directory='../logs',
                  **kwargs) -> None:
         """
         Args:
-            X: Data covariates
-            y: Data labels
-            X_test: Test+Held-out covariates
-            y_test: Test+Held-out labels
+            model_family: The model family used for learning algorithm
             sources: An array or dictionary assiging each point to its group.
                 If None, evey points gets its individual value
-            model_family: The model family used for learning algorithm
-            metric: Evaluation metric
             seed: Random seed. When running parallel monte-carlo samples,
                 we initialize each with a different seed to prevent getting 
                 same permutations
+            perf_metric: Evaluation metric
             directory: Directory to save results and figures
             **kwargs: Arguments of the model
         """
@@ -38,6 +35,8 @@ class TruncatedMC(StaticValuator):
         if len(test_dataset) > 2:
             assert perf_metric != 'f1', 'Invalid metric for multiclass!'
             assert perf_metric != 'auc', 'Invalid metric for multiclass!'
+
+        self.directory = directory
 
         # Record parameters
         self.kwargs = kwargs
