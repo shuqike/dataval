@@ -1,3 +1,5 @@
+import os
+import _pickle as pkl
 import numpy as np
 from tqdm import tqdm
 import torch
@@ -221,10 +223,24 @@ class TruncatedMC(StaticValuator):
             )
         self.vals_gshap = np.mean(self.mem_gshap, axis=0)
 
-    def _save_results(self):
+    def _save_results(self, overwrite=False):
         """Saves results computed so far.
         """
-        raise NotImplementedError
+        loo_dir = os.path.join(self.directory, 'loo.pkl')
+        if not os.path.exists(loo_dir) or overwrite:
+            pkl.dump({'loo': self.vals_loo}, open(loo_dir, 'wb'))
+        tmc_dir = os.path.join(
+            self.directory, 
+            'mem_tmc_{}.pkl'.format(self.tmc_number.zfill(4))
+        )
+        g_dir = os.path.join(
+            self.directory, 
+            'mem_g_{}.pkl'.format(self.g_number.zfill(4))
+        )  
+        pkl.dump({'mem_tmc': self.mem_tmc, 'idxs_tmc': self.idxs_tmc}, 
+                 open(tmc_dir, 'wb'))
+        pkl.dump({'mem_g': self.mem_g, 'idxs_g': self.idxs_g}, 
+                 open(g_dir, 'wb'))  
 
     def run(self, save_every, err, tol=1e-2, do_tmc = True, do_gshap=False, do_loo=False):
         """
