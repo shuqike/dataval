@@ -91,7 +91,6 @@ class TruncatedMC(StaticValuator):
         for i in tqdm(self.sources.keys()):
             batch_idxs = np.delete(np.arange(self.num_data), self.sources[i], axis=0)
             self.model.reset()
-            # TODO: DEBUG
             self.model.fit(
                 self.train_dataset.select(batch_idxs)
             )
@@ -122,20 +121,24 @@ class TruncatedMC(StaticValuator):
         """
         idxs = np.random.permutation(len(self.sources))
         marginal_contribs = np.zeros(len(self.X_train))
-        X_batch = np.zeros((0,) + tuple(self.X_train.shape[1:]))
-        y_batch = np.zeros(0, int)
+        batch_idxs = []
+        # X_batch = np.zeros((0,) + tuple(self.X_train.shape[1:]))
+        # y_batch = np.zeros(0, int)
         truncation_counter = 0
         new_score = self.random_score
         for idx in tqdm(idxs):
             old_score = new_score
-            X_batch = np.concatenate([X_batch, self.X_train[self.sources[idx]]])
-            y_batch = np.concatenate([y_batch, self.train_dataset['label'][self.sources[idx]]])
-            if len(set(y_batch)) == len(set(self.test_dataset['label'])):
+            batch_idxs = np.concatenate([batch_idxs, self.sources[idx]])
+            # X_batch = np.concatenate([X_batch, self.X_train[self.sources[idx]]])
+            # y_batch = np.concatenate([y_batch, self.train_dataset['label'][self.sources[idx]]])
+            # if len(set(y_batch)) == len(set(self.test_dataset['label'])):
+            if len(set(self.train_dataset['label'][batch_idxs])) == len(set(self.test_dataset['label'])):
                 self.model.reset()
                 self.model.fit(
-                    train_dataset=Dataset.from_dict(
-                        {'feature': X_batch, 'label': y_batch}
-                    )
+                    self.train_dataset.select(batch_idxs)
+                    # train_dataset=Dataset.from_dict(
+                    #     {'feature': X_batch, 'label': y_batch}
+                    # )
                 )
                 new_score = self.model.perf_metric(self.test_dataset)
             marginal_contribs[self.sources[idx]] = (new_score - old_score)
