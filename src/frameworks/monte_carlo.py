@@ -109,9 +109,10 @@ class TruncatedMC(StaticValuator):
                 bag_idxs = np.random.choice(len(self.y_test), len(self.y_test))
                 scores.append(
                     self.model.perf_metric(
-                        Dataset.from_dict(
-                           {'feature': self.X_test[bag_idxs], 'label': self.test_dataset['label'][bag_idxs]}
-                        )
+                        self.test_dataset.select(bag_idxs)
+                        # Dataset.from_dict(
+                        #    {'feature': self.X_test[bag_idxs], 'label': self.test_dataset['label'][bag_idxs]}
+                        # )
                     )
                 )
         self.mean_score = np.mean(scores)
