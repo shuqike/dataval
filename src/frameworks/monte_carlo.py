@@ -89,13 +89,11 @@ class TruncatedMC(StaticValuator):
         baseline_val = self.model.perf_metric(self.test_dataset)
         self.vals_loo = np.zeros(self.num_data)
         for i in tqdm(self.sources.keys()):
-            X_batch = np.delete(self.X_train, self.sources[i], axis=0)
-            y_batch = np.delete(self.train_dataset['label'], self.sources[i], axis=0)
+            batch_idxs = np.delete(np.arange(self.num_data), self.sources[i], axis=0)
             self.model.reset()
+            # TODO: DEBUG
             self.model.fit(
-                train_dataset=Dataset.from_dict(
-                    {'feature': X_batch, 'label': y_batch}
-                )
+                self.train_dataset.select(batch_idxs)
             )
             removed_val = self.model.perf_metric(self.test_dataset)
             self.vals_loo[self.sources[i]] = (baseline_val - removed_val)

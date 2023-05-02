@@ -14,7 +14,8 @@ class Casifier:
         self._get_model()
         self._get_processor()
         self._seed = kwargs.get('seed', 3407)
-        self._max_epoch = kwargs.get('max_epoch', 10)
+        # TODO: DEBUG
+        self._max_epoch = kwargs.get('max_epoch', 2)
         self._batch_size = kwargs.get('batch_size', 64)
         self._lr = kwargs.get('lr', 1e-3)
         self._device = kwargs.get('device', 'cpu')
@@ -39,6 +40,7 @@ class Casifier:
             warmup_steps=self._num_warmup_steps,
             save_steps=self._save_steps,
             seed=self._seed,
+            disable_tqdm=True,
         )
         # Re-initialize weights for data valuation
         self._pretrained = kwargs.get('pretrained', False)
@@ -81,12 +83,15 @@ class Casifier:
         return self._model(x)
 
     def perf_metric(self, eval_dataset):
-        outputs = self._trainer.predict(eval_dataset)
-        y_hat = outputs.predictions
-        return self._perf_metric.compute(
-            predictions=y_hat,
-            references=eval_dataset['label']
-        )
+        eval_results = self._trainer.evaluate(eval_dataset)
+        return eval_results['eval_accuracy']
+        # outputs = self._trainer.predict(eval_dataset)
+        # y_hat = outputs.label_ids
+        # print(y_hat[0])
+        # return self._perf_metric.compute(
+        #     predictions=y_hat,
+        #     references=eval_dataset['label']
+        # )
 
     def fit(self, train_dataset, eval_dataset=None, training_args=None):
         """'fit' is an offline method.

@@ -96,3 +96,4 @@ We compare the time and memory consumption of different setting pairs:
 8. [Continual Learning Course](https://course.continualai.org/)
 9. [Continual Learning Papers](https://github.com/ContinualAI/continual-learning-papers)
 10. [A Comprehensive Survey of Continual Learning: Theory, Method and Application](https://arxiv.org/abs/2302.00487)
+11. [A tutorial on transformers in Chinese](https://www.huaxiaozhuan.com/)
