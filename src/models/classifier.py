@@ -15,8 +15,8 @@ class Casifier:
         self._get_processor()
         self._seed = kwargs.get('seed', 3407)
         # TODO: DEBUG
-        self._max_epoch = kwargs.get('max_epoch', 10)
-        self._batch_size = kwargs.get('batch_size', 64)
+        self._max_epoch = kwargs.get('max_epoch', 5)
+        self._batch_size = kwargs.get('batch_size', 16)
         self._lr = kwargs.get('lr', 1e-3)
         self._device = kwargs.get('device', 'cpu')
         self._scheduler_name = kwargs.get('scheduler_name', 'linear')

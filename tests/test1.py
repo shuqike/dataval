@@ -1,6 +1,6 @@
 """Test the time
-data points 100
-max epoch 10
+data points 50
+max epoch 5
 err 0.1
 """
 import sys
