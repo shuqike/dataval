@@ -85,13 +85,26 @@ class Casifier:
     def perf_metric(self, eval_dataset):
         eval_results = self._trainer.evaluate(eval_dataset)
         return eval_results['eval_accuracy']
-        # outputs = self._trainer.predict(eval_dataset)
-        # y_hat = outputs.label_ids
-        # print(y_hat[0])
-        # return self._perf_metric.compute(
-        #     predictions=y_hat,
-        #     references=eval_dataset['label']
-        # )
+
+    def one_epoch(self, train_dataset):
+        training_args = TrainingArguments(
+            output_dir="test_trainer",
+            logging_strategy='no',
+            num_train_epochs=1,
+            learning_rate=self._lr,
+            lr_scheduler_type='constant',
+            warmup_steps=0,
+            save_strategy='no',
+            seed=self._seed,
+            disable_tqdm=True,
+        )
+        self._trainer = Trainer(
+            model=self._model,
+            args=training_args,
+            train_dataset=train_dataset,
+            compute_metrics=self._compute_train_metrics,
+        )
+        self._trainer.train()
 
     def fit(self, train_dataset, eval_dataset=None, training_args=None):
         """'fit' is an offline method.

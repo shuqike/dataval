@@ -192,20 +192,24 @@ class TruncatedMC(StaticValuator):
     def _get_gshap_lr(self):
         return 1e-3
 
-    def _gshap_iter(self, perm_idxs):
+    def _gshap_iter(self, perm_idxs, progress_bar):
         """Iterate once for gradient-shapley algorithm
         """
         val_result = []
-        optimizer = torch.optim.SGD(self.model.parameters(), lr=self.g_shap_lr)
+        # optimizer = torch.optim.SGD(self.model._model.parameters(), lr=self.g_shap_lr)
         for i in tqdm(perm_idxs):
-            self.model._model.train()
-            outputs = self.model._model(self.X_train[self.sources[i]], self.train_dataset['label'][self.sources[i]])
-            loss = outputs.loss
-            loss.backward()
-            optimizer.step()
-            optimizer.zero_grad()
-            self.model._model.eval()
+            # self.model._model.train()
+            # TODO: DEBUG
+            idxs = np.asarray(self.sources[i], dtype=int)
+            # outputs = self.model._model(self.train_dataset.select(idxs))
+            # loss = outputs.loss
+            # loss.backward()
+            # optimizer.step()
+            # optimizer.zero_grad()
+            # self.model._model.eval()
+            self.model.one_epoch(self.train_dataset.select(idxs))
             val_result.append(self.model.perf_metric(self.test_dataset))
+            progress_bar.update(1)
         return np.asarray(val_result)
 
     def _calc_gshap(self, num_iter):
@@ -217,6 +221,7 @@ class TruncatedMC(StaticValuator):
         """
         if self.g_shap_lr is None:
             self.g_shap_lr = self._get_gshap_lr()
+        progress_bar = tqdm(range(num_iter*len(self.sources.keys())))
         for _ in range(num_iter):
             # initialize parameters
             self.model.reset()
@@ -226,18 +231,18 @@ class TruncatedMC(StaticValuator):
             perm_idxs = list(self.sources.keys())
             np.random.shuffle(perm_idxs)
             # Get valuation at each training epoch
-            val_result = self._gshap_iter(perm_idxs)
-            marginal_contribs[1:] += val_result[0][1:]
-            marginal_contribs[1:] -= val_result[0][:-1]
+            val_result = self._gshap_iter(perm_idxs, progress_bar)
+            marginal_contribs[1:] += val_result[1:]
+            marginal_contribs[1:] -= val_result[:-1]
             individual_contribs = np.zeros(len(self.X_train))
             for i, idx in enumerate(perm_idxs):
                 individual_contribs[self.sources[idx]] += marginal_contribs[i]
                 individual_contribs[self.sources[idx]] /= len(self.sources[idx])
-            self.mem_g = np.concatenate(
-                [self.mem_g, np.reshape(individual_contribs, (1,-1))]
+            self.mem_gshap = np.concatenate(
+                [self.mem_gshap, np.reshape(individual_contribs, (1,-1))]
             )
-            self.idxs_g = np.concatenate(
-                [self.idxs_g, np.reshape(perm_idxs, (1,-1))]
+            self.idxs_gshap = np.concatenate(
+                [self.idxs_gshap, np.reshape(perm_idxs, (1,-1))]
             )
         self.vals_gshap = np.mean(self.mem_gshap, axis=0)
 
@@ -257,7 +262,7 @@ class TruncatedMC(StaticValuator):
         )  
         pkl.dump({'mem_tmc': self.mem_tmc, 'idxs_tmc': self.idxs_tmc}, 
                  open(tmc_dir, 'wb'))
-        pkl.dump({'mem_g': self.mem_g, 'idxs_g': self.idxs_g}, 
+        pkl.dump({'mem_g': self.mem_g, 'idxs_gshap': self.idxs_gshap}, 
                  open(g_dir, 'wb'))  
 
     def run(self, save_every, err, tol=1e-2, do_tmc = True, do_gshap=False, do_loo=False):
@@ -277,12 +282,14 @@ class TruncatedMC(StaticValuator):
 
         self.mem_tmc = np.zeros((0, self.num_data))
         self.mem_gshap = np.zeros((0, self.num_data))
+        self.idxs_tmc = np.zeros((0, len(self.sources)), int)
+        self.idxs_gshap = np.zeros((0, len(self.sources)), int)
         while do_tmc or do_gshap:
             if do_gshap:
                 if utils.error(self.mem_gshap) < err:
                     do_gshap = False
                 else:
-                    self._calc_gshap(save_every, tol)
+                    self._calc_gshap(save_every)
             if do_tmc:
                 if utils.error(self.mem_tmc) < err:
                     do_tmc = False
