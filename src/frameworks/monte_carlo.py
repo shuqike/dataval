@@ -71,6 +71,9 @@ class TruncatedMC(StaticValuator):
 
         # Get the score of the initial model
         self.random_score = self._init_score()
+        
+        # Get saving id
+        self.tmc_number, self.g_number = self._which_parallel()
 
     def _init_score(self):
         """Get the score of the initial model.
@@ -80,6 +83,17 @@ class TruncatedMC(StaticValuator):
             return np.max(hist)
         else:
             raise NotImplementedError
+
+    def _which_parallel(self):
+        '''Prevent conflict with parallel runs.'''
+        previous_results = os.listdir(self.directory)
+        tmc_nmbrs = [int(name.split('.')[-2].split('_')[-1])
+                      for name in previous_results if 'mem_tmc' in name]
+        g_nmbrs = [int(name.split('.')[-2].split('_')[-1])
+                     for name in previous_results if 'mem_g' in name]        
+        tmc_number = str(np.max(tmc_nmbrs) + 1) if len(tmc_nmbrs) else '0' 
+        g_number = str(np.max(g_nmbrs) + 1) if len(g_nmbrs) else '0' 
+        return tmc_number, g_number
 
     def _calc_loo(self):
         """Calculate leave-one-out values for the given metric.
@@ -103,9 +117,9 @@ class TruncatedMC(StaticValuator):
         scores = []
         self.model.reset()
         for _ in range(1):
-            self.model.fit(self.X_train, self.train_dataset['label'])
+            self.model.fit(self.train_dataset)
             for __ in range(100):
-                bag_idxs = np.random.choice(len(self.y_test), len(self.y_test))
+                bag_idxs = np.random.choice(self.num_data, self.num_data)
                 scores.append(
                     self.model.perf_metric(
                         self.test_dataset.select(bag_idxs)
