@@ -4,3 +4,4 @@ notebooks/test_trainer/
 notebooks/tmp_trainer/
 **/__pycache__/
 .ipynb_checkpoints
+**.pyc
