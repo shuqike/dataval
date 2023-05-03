@@ -6,8 +6,6 @@ from time import time
 from collections import defaultdict
 from sklearn.linear_model import Ridge, LassoCV, LogisticRegression
 from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor
-from ensemble_DV_core import RandomForestClassifierDV, RandomForestRegressorDV
-from bagging_DV_core import BaggingClassifierDV, BaggingRegressorDV
 from sklearn.isotonic import IsotonicRegression
 from src.frameworks.valuator import StaticValuator
 
