@@ -117,7 +117,7 @@ def dataset_maker(dataset_num, name, task_type):
     
     return save_dict, file_name, 'success', save_dict['dataset_name']
 
-def download_openML_dataset(path='../data/', n_minimum=5*1e3, n_maximum=1e5, p_maximum=1e3, use_sample=True):
+def download_openML_dataset(path='../data', n_minimum=5*1e3, n_maximum=1e5, p_maximum=1e3, use_sample=True):
     openml.config.set_cache_directory(path)
     if use_sample is True:
         import pandas as pd

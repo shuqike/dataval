@@ -1,4 +1,4 @@
-data/*
+data/MNIST/
 notebooks/temp/
 notebooks/test_trainer/
 notebooks/tmp_trainer/
