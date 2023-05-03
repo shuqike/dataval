@@ -11,7 +11,7 @@ from src.frameworks.valuator import StaticValuator
 from src.models import BaggingClassifierDV, BaggingRegressorDV, RandomForestClassifierDV, RandomForestRegressorDV
 
 
-class DataOOB(StaticValuator):
+class SimpDataOOB(StaticValuator):
     def __init__(self,
                  X, y, 
                  X_val, y_val, 

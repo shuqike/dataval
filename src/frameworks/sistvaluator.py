@@ -1,11 +1,14 @@
 import pickle
+from time import time
 import numpy as np
 from collections import defaultdict
 from sklearn.linear_model import LogisticRegression, LinearRegression
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor
 from sklearn.neighbors import KNeighborsClassifier, KNeighborsRegressor
-from src.frameworks.outofbag import DataOOB
+from src.frameworks.simp_oob import SimpDataOOB
+from src.frameworks.simp_mc import SimpMC
+import src.utils as utils
 
 
 class SistValuator:
@@ -95,6 +98,54 @@ class SistValuator:
             print(f'KNN {r2_knn:.3f}')
             self.baseline_score_dict={'Meta_Data': ['Linear', 'RF', 'Avg_tree', 'Tree', 'KNN'],
                                       'Results': [r2_linear, r2_rf, r2_tree_1, r2_tree, r2_knn]}
+
+    def _dict_update(self, engine):
+        self.data_value_dict.update(engine.data_value_dict)
+        self.time_dict.update(engine.time_dict)
+
+    def compute_marginal_contribution_based_methods(self, loo_run=True, betashap_run=True):
+        '''
+        This function computes marginal contribution based methods
+        '''
+        self.mc_engine=SimpMC(
+            X=self.X, y=self.y, 
+            X_val=self.X_val, y_val=self.y_val, 
+            problem=self.problem, model_family=self.model_family
+        )
+        self.mc_engine.run(loo_run=loo_run, betashap_run=betashap_run)
+        self._dict_update(self.mc_engine)
+
+    def compute_oob_and_ame(self, AME_run=True):
+        '''
+        This function computes feature attribution methods
+        '''
+        self.oob_engine=SimpDataOOB(
+            X=self.X, y=self.y, 
+            X_val=self.X_val, y_val=self.y_val, 
+            problem=self.problem, model_family=self.model_family,
+            n_trees=self.n_trees
+        )
+        self.oob_engine.run(AME_run=AME_run)
+        self._dict_update(self.oob_engine)
+
+    def evaluate_data_values(self, noisy_index, X_test, y_test, removal_run=True):
+        time_init=time()
+        if self.dargs['is_noisy'] > 0:
+            self.noisy_detect_dict=utils.noisy_detection_experiment(
+                self.data_value_dict,
+                noisy_index
+            )
+            self.time_dict['Eval:noisy']=time()-time_init
+
+        if removal_run is True:
+            time_init=time()
+            self.removal_dict=utils.point_removal_experiment(
+                self.data_value_dict,
+                self.X, self.y,
+                X_test, y_test,
+                problem=self.problem
+            )
+            self.time_dict['Eval:removal']=time()-time_init
 
     def save_results(self, runpath, dataset, dargs_ind, noisy_index):
         self.sparsity_dict=defaultdict(list)
