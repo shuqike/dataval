@@ -1,6 +1,6 @@
 data/MNIST/
 data/org/
-data/dataset_clf_openml
+data/dataset_clf_openml/
 notebooks/temp/
 notebooks/test_trainer/
 notebooks/tmp_trainer/
