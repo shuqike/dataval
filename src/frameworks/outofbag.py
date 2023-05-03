@@ -8,6 +8,7 @@ from sklearn.linear_model import Ridge, LassoCV, LogisticRegression
 from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor
 from sklearn.isotonic import IsotonicRegression
 from src.frameworks.valuator import StaticValuator
+from src.models import BaggingClassifierDV, BaggingRegressorDV, RandomForestClassifierDV, RandomForestRegressorDV
 
 
 class DataOOB(StaticValuator):
