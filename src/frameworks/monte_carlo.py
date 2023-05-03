@@ -59,6 +59,7 @@ class TruncatedMC(StaticValuator):
         self.sources = sources
         self.train_dataset = train_dataset
         self.num_data = len(self.X_train)
+        self.y_train = np.asarray(self.train_dataset['label'])
         self.test_dataset = test_dataset
 
         # Prepare model
@@ -137,16 +138,15 @@ class TruncatedMC(StaticValuator):
         marginal_contribs = np.zeros(len(self.X_train))
         batch_idxs = []
         # X_batch = np.zeros((0,) + tuple(self.X_train.shape[1:]))
-        # y_batch = np.zeros(0, int)
+        y_batch = np.zeros(0, int)
         truncation_counter = 0
         new_score = self.random_score
         for idx in tqdm(idxs):
             old_score = new_score
             batch_idxs = np.concatenate([batch_idxs, self.sources[idx]])
             # X_batch = np.concatenate([X_batch, self.X_train[self.sources[idx]]])
-            # y_batch = np.concatenate([y_batch, self.train_dataset['label'][self.sources[idx]]])
-            # if len(set(y_batch)) == len(set(self.test_dataset['label'])):
-            if len(set(self.train_dataset['label'][batch_idxs])) == len(set(self.test_dataset['label'])):
+            y_batch = np.concatenate([y_batch, self.y_train[self.sources[idx]]])
+            if len(set(y_batch)) == len(set(self.test_dataset['label'])):
                 self.model.reset()
                 self.model.fit(
                     self.train_dataset.select(batch_idxs)
