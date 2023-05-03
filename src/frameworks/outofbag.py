@@ -2,6 +2,10 @@ import pickle
 import numpy as np
 from collections import defaultdict
 from src.frameworks.valuator import StaticValuator
+from sklearn.linear_model import LogisticRegression, LinearRegression
+from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
+from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor
+from sklearn.neighbors import KNeighborsClassifier, KNeighborsRegressor
 
 
 class DataValuation(StaticValuator):
