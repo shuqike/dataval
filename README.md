@@ -46,6 +46,11 @@ We compare the time and memory consumption of different setting pairs:
 4. [DeepCTR](https://github.com/shenweichen/DeepCTR). DeepCTR is a easy-to-use, modular and extendible package of deep-learning based CTR(Clickthrough rate prediction) models along with lots of core components layers which can be used to easily build custom models.
 5. [TweetNLP](https://tweetnlp.org/).
 
+## Repositories
+
+1. [Data-OOB](https://github.com/ykwon0407/dataoob/tree/main). Implementation of the paper "Data-OOB: Out-of-bag Estimate as a Simple and Efficient Data Value" accepted at ICML 2023.
+2. [Data Shapley](https://github.com/shuqike/DataShapley). Implementation of the paper "Data Shapley: Equitable Valuation of Data for Machine Learning" accepted at ICML 2019.
+
 ## Dataset pool
 
 ### Recommendation system
