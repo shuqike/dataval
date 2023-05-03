@@ -29,7 +29,6 @@ def compute_f1_score_by_set(list_a, list_b):
         f1_score=0.
     return f1_score
 
-
 def noisy_detection_core(value, noisy_index):
     # without kmeans algorithm (but requires prior knowledge of the number of noise labels)
     index_of_small_values=np.argsort(value)[:len(noisy_index)]
