@@ -5,7 +5,7 @@ warnings.filterwarnings("ignore")
 from collections import defaultdict
 import torch
 from src.frameworks.valuator import DynamicValuator
-from src.models import RandomForestClassifierDV, RandomForestRegressorDV, Vestimator_1
+from src.models import RandomForestClassifierDV, RandomForestRegressorDV, Vestimator
 
 
 class DvrlLoss(torch.nn.Module):
@@ -26,6 +26,7 @@ class DvrlLoss(torch.nn.Module):
         """
         # Generator loss (REINFORCE algorithm)
         one = torch.ones_like(est_data_value, dtype=est_data_value.dtype)
+        # TODO: incorporate OOB value
         prob = torch.sum(s_input * torch.log(est_data_value + self.epsilon) + \
                          (one - s_input) * \
                          torch.log(one - est_data_value + self.epsilon))
@@ -100,7 +101,7 @@ class Odvrl(DynamicValuator):
         """Train value estimator, estimate OOB values
         """
         # selection network
-        self.value_estimator = Vestimator_1(
+        self.value_estimator = Vestimator(
             input_dim=self.input_dim, 
             layer_number=self.layer_number, 
             hidden_dim=self.hidden_dim, 
