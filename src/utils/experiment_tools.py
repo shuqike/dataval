@@ -3,6 +3,7 @@ warnings.filterwarnings('ignore')
 import numpy as np
 from sklearn.linear_model import LogisticRegression, LinearRegression
 from sklearn.cluster import KMeans
+import torchvision
 
 
 '''
@@ -50,6 +51,15 @@ def noisy_detection_experiment(value_dict, noisy_index):
     noisy_dict={'Meta_Data': ['Recall', 'Kmeans_label'],
                 'Results': noisy_score_dict}
     return noisy_dict
+
+def online_noisy_detection_experiment():
+    transform = torchvision.transforms.Compose([
+        torchvision.transforms.ToTensor(),
+        torchvision.transforms.Normalize((0.1307,), (0.3081,))
+    ])
+    train_dt = torchvision.datasets.MNIST('../data', train=True, download=True,transform=transform)
+    test_dt = torchvision.datasets.MNIST('../data', train=False, transform=transform)
+    # TODO:
 
 '''
 point removal task
