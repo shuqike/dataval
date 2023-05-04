@@ -109,7 +109,7 @@ class Odvrl(DynamicValuator):
         valid_perf = sum(1 for x, y in zip(pred_list, label_list) if x == y) / len(pred_list)  # accuracy
         return valid_perf
 
-    def one_step(self, step_id, X, y, val_dataset, progress_bar):
+    def one_step(self, step_id, X, y, val_dataset):
         """Train value estimator, estimate OOB values
         """
         # first OOB with baseline performance
@@ -203,7 +203,7 @@ class Odvrl(DynamicValuator):
             data_value_list = data_value_list.to(self.device)
             s_input = s_input.to(self.device)
             loss = dvrl_criterion(data_value_list, s_input, reward)
-            progress_bar.write(
+            print(
                 'At step %d epoch %d, the reward is %f, the prob is %f' % (step_id, epoch, \
                 reward.cpu().detach().numpy()[0], \
                 np.max(data_value_list.cpu().detach().numpy()))
@@ -219,5 +219,3 @@ class Odvrl(DynamicValuator):
                         'net_epoch%d.pth' % (epoch + 1)
                     )
                 )
-
-            progress_bar.update(1)
