@@ -1,9 +1,11 @@
 import warnings
 warnings.filterwarnings('ignore')
 import numpy as np
+import keras
 from sklearn.linear_model import LogisticRegression, LinearRegression
 from sklearn.cluster import KMeans
 import torchvision
+from src.utils.data_tools import CustomDataset
 
 
 '''
@@ -52,8 +54,71 @@ def noisy_detection_experiment(value_dict, noisy_index):
                 'Results': noisy_score_dict}
     return noisy_dict
 
-def create_noisy_mnist():
-    pass
+def infer_cluster_labels(kmeans, ground_truth_labels):
+    inferred_labels = {}
+    for i in range(kmeans.n_clusters):
+        # find index of points in cluster
+        labels = []
+        index = np.where(kmeans.labels_ == i)
+        # append actual labels for each point in cluster
+        labels.append(ground_truth_labels[index])
+        # determine most common label
+        if len(labels[0]) == 1:
+            counts = np.bincount(labels[0])
+        else:
+            counts = np.bincount(np.squeeze(labels))
+        # assign the cluster to a value in the inferred_labels dictionary
+        if np.argmax(counts) in inferred_labels:
+            # append the new number to the existing array at this slot
+            inferred_labels[np.argmax(counts)].append(i)
+        else:
+            # create a new array in this slot
+            inferred_labels[np.argmax(counts)] = [i]
+    return inferred_labels
+
+def infer_data_labels(X_labels, cluster_labels):
+    """
+    Determines label for each array, depending on the cluster it has been assigned to.
+    returns: predicted labels for each array
+    """
+    
+    # empty array of len(X)
+    predicted_labels = np.zeros(len(X_labels)).astype(np.uint8)
+
+    for i, cluster in enumerate(X_labels):
+        for key, value in cluster_labels.items():
+            if cluster in value:
+                predicted_labels[i] = key
+
+    return predicted_labels
+
+def create_noisy_mnist(noise_level='normal'):
+    # prepare data
+    (x_train, y_train), (x_test, y_test) = keras.datasets.mnist.load_data()
+    x_train = x_train.reshape(len(x_train),-1)
+    # normalize the data to 0 - 1
+    x_train = x_train.astype(float) / 255.
+
+    if noise_level == 'normal':
+        n_clusters = 20
+    elif noise_level == 'low':
+        n_clusters = 64
+    elif noise_level == 'high':
+        n_clusters = 12
+    else:
+        raise NotImplementedError('Please choose noise level from [normal, low, high]')
+    # use kmeans as a noisy annotator
+    kmeans = KMeans(n_clusters = 20)
+    kmeans.fit(x_train)
+    cluster_labels = infer_cluster_labels(kmeans, y_train)
+    X_clusters = kmeans.predict(x_train)
+    predicted_labels = infer_data_labels(X_clusters, cluster_labels)
+
+    # replace training labels with noisy labels
+    Y = predicted_labels
+
+    # wrap and return training dataset and test dataset
+    return CustomDataset(x_train, y_train), CustomDataset(x_test, y_test)
 
 def online_noisy_detection_experiment():
     transform = torchvision.transforms.Compose([
