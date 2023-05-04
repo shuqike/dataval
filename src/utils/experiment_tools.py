@@ -93,7 +93,10 @@ def infer_data_labels(X_labels, cluster_labels):
 
 def create_noisy_mnist(noise_level='normal'):
     # prepare data
-    transform = torchvision.transforms.Compose([torchvision.transforms.ToTensor()])
+    transform = torchvision.transforms.Compose([
+        torchvision.transforms.ToTensor(), 
+        torchvision.transforms.Normalize((0.1307,), (0.3081,))
+    ])
 
     mnist_train_ds = MNIST_truncated('../data', train=True, download=True, transform=transform, y_train='nmsl')
     mnist_test_ds = MNIST_truncated('../data', train=False, download=True, transform=transform, y_train='nmsl')
@@ -105,12 +108,6 @@ def create_noisy_mnist(noise_level='normal'):
     y_train = y_train.data.numpy()
     x_test = x_test.data.numpy()
     y_test = y_test.data.numpy()
-
-    x_train = x_train.reshape(len(x_train), -1)
-    x_test = x_test.reshape(len(x_test), -1)
-    # normalize the data to 0 - 1
-    x_train = x_train.astype(float) / 255.
-    x_test = x_test.astype(float) / 255.
 
     if noise_level == 'normal':
         n_clusters = 20

@@ -24,10 +24,10 @@ class Vestimator(torch.nn.Module):
         :param y: train_labels
         :param y_hat_diff: l1 difference between predicion and grountruth
         """
-        x = torch.cat([x, y], dim=1)
-        x = self.net_(x)
-        # TODO: incorporate weak learners
-        x = torch.cat([x, y_hat_diff], dim=1)
+        x = torch.flatten(x, start_dim=2)
+        x = torch.cat([x, y], dim=2)
+        x = self.net_(x.float())
+        x = torch.cat([x, y_hat_diff], dim=2)
         output = self.combine_layer(x)
         return output
 
@@ -47,6 +47,7 @@ class Vestimator_1(Vestimator):
         :param y_hat_diff: l1 difference between predicion and grountruth
         :param y_hat_diff: l1 difference between weak predicion and grountruth
         """
+        x = torch.flatten(x, start_dim=2)
         x = torch.cat([x, y], dim=1)
         x = self.net_(x)
         x = torch.cat([x, y_hat_diff, weak_y_hat_diff], dim=1)

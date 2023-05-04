@@ -25,7 +25,7 @@ class CustomDataloader:
     """Refer to https://www.programcreek.com/python/example/125051/torch.utils.data.RandomSampler
     """
     def __init__(self, X, y, batch_size) -> None:
-        self.X = X
+        self.X = torch.unsqueeze(X, dim=1)
         self.y = y
         self.num_data = len(y)
         self.batch_size = batch_size
@@ -36,10 +36,10 @@ class CustomDataloader:
         for idx in self.sampler:
             idxs.append(idx)
             if len(idxs) == self.batch_size:
-                yield (torch.tensor(self.X[idxs]), torch.tensor(self.y[idxs]))
+                yield (self.X[idxs], self.y[idxs])
                 idxs = []
         if len(idxs) > 0:
-            yield (torch.tensor(self.X[idxs]), torch.tensor(self.y[idxs]))
+            yield (self.X[idxs], self.y[idxs])
 
 
 def create_dataset(X, y):
