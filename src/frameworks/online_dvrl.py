@@ -109,7 +109,7 @@ class Odvrl(DynamicValuator):
         valid_perf = sum(1 for x, y in zip(pred_list, label_list) if x == y) / len(pred_list)  # accuracy
         return valid_perf
 
-    def one_step(self, X, y, val_dataset, progress_bar):
+    def one_step(self, step_id, X, y, val_dataset, progress_bar):
         """Train value estimator, estimate OOB values
         """
         # first OOB with baseline performance
@@ -174,6 +174,7 @@ class Odvrl(DynamicValuator):
                     # loss function
                     pre_criterion = torch.nn.CrossEntropyLoss(reduction='none')
                     loss = pre_criterion(output, label)
+                    # print('loss', loss)
                     # the samples that are not selected won't have impact on the gradient
                     loss = loss * torch.squeeze(sel_prob_curr, 1)
 
@@ -202,9 +203,8 @@ class Odvrl(DynamicValuator):
             data_value_list = data_value_list.to(self.device)
             s_input = s_input.to(self.device)
             loss = dvrl_criterion(data_value_list, s_input, reward)
-            print('fuck', dvrl_perf)
             progress_bar.write(
-                'At epoch %d, the reward is %f, the prob is %f' % (epoch, \
+                'At step %d epoch %d, the reward is %f, the prob is %f' % (step_id, epoch, \
                 reward.cpu().detach().numpy()[0], \
                 np.max(data_value_list.cpu().detach().numpy()))
             )
