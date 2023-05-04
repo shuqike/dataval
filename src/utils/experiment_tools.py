@@ -52,6 +52,9 @@ def noisy_detection_experiment(value_dict, noisy_index):
                 'Results': noisy_score_dict}
     return noisy_dict
 
+def create_noisy_mnist():
+    pass
+
 def online_noisy_detection_experiment():
     transform = torchvision.transforms.Compose([
         torchvision.transforms.ToTensor(),
