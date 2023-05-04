@@ -8,4 +8,5 @@ class StaticValuator(Valuator):
 
 
 class DynamicValuator(Valuator):
-    pass
+    def one_step(self):
+        raise NotImplementedError
