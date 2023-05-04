@@ -79,7 +79,7 @@ class Odvrl(DynamicValuator):
         self.data_value_dict=defaultdict(list)
         self.time_dict=defaultdict(list)
 
-    def _calc_oob(self, X, y):
+    def _calc_oob(self, X, y, X_val=None, y_val=None):
         """Calculate OOB value of the current dataset
         """
         # record starting time
@@ -96,6 +96,9 @@ class Odvrl(DynamicValuator):
         self.data_value_dict[f'OOB']=(self.rf_model.evaluate_oob_accuracy(X, y)).to_numpy()
         # record oob time
         self.time_dict[f'OOB']=time()-time_init
+        # record mean accuracy
+        if X_val is not None:
+            self.data_value_dict[f'base_metric']=self.rf_model.evaluate_mean_metrics(X_val=X_val, y_val=y_val)
 
     def one_step(self, X, y, X_val, y_val):
         """Train value estimator, estimate OOB values
@@ -107,4 +110,16 @@ class Odvrl(DynamicValuator):
             hidden_dim=self.hidden_dim, 
             output_dim=self.output_dim
         )
+
+        # first OOB with baseline performance
+        self._calc_oob(X, y, X_val, y_val)
+
         self.value_estimator = self.value_estimator.to(self.device)
+        # loss function
+        dvrl_criterion = DvrlLoss(self.epsilon, self.threshold)
+        # optimizer
+        dvrl_optimizer = torch.optim.Adam(self.value_estimator.parameters(), lr=self.learning_rate)
+        # learning rate scheduler
+        scheduler = torch.optim.lr_scheduler.ExponentialLR(dvrl_optimizer, gamma=0.999)
+
+        print('First round weak learner performance F1: %f' % self.data_value_dict[f'base_metric'])

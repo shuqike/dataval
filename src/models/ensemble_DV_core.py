@@ -6,9 +6,11 @@ from warnings import catch_warnings, simplefilter, warn
 import threading
 from abc import ABCMeta, abstractmethod
 import numpy as np
+import pandas as pd
 from scipy.sparse import issparse
 from scipy.sparse import hstack as sparse_hstack
 from joblib import Parallel
+import sklearn
 from sklearn.base import is_classifier
 from sklearn.base import ClassifierMixin, MultiOutputMixin, RegressorMixin, TransformerMixin
 from sklearn.metrics import accuracy_score, r2_score
@@ -374,7 +376,6 @@ class RandomForestClassifierDV(RandomForestClassifier):
         return np.array(self._ensemble_X), np.array(self._ensemble_y)
 
     def evaluate_oob_accuracy(self, X, y):
-        import pandas as pd
         assert len(self.estimators_)!=0, 'Run fit first. self.estimators_ is not defined'
         assert len(self._ensemble_X)!=0, 'Run evaluate_importance first. self._ensemble_X is not defined'
 
@@ -386,6 +387,20 @@ class RandomForestClassifierDV(RandomForestClassifier):
         df_oob=pd.DataFrame(oob_performance)[np.arange(len(X))]
 
         return np.mean(df_oob, axis=0)
+
+    def evaluate_mean_metrics(self, X_val, y_val, metric_name='f1'):
+        if metric_name == 'f1':
+            return np.mean(
+                [
+                    sklearn.metrics.f1_score(
+                        y_val, 
+                        weak_learner.predict(X_val)
+                    ) for weak_learner in self.estimators_
+                ]
+            )
+        else:
+            raise NotImplementedError('Check a metric parameter')
+
 
 class RandomForestRegressorDV(RandomForestRegressor):
     def __init__(
@@ -615,7 +630,6 @@ class RandomForestRegressorDV(RandomForestRegressor):
         return self
 
     def evaluate_oob_accuracy(self, X, y):
-        import pandas as pd
         assert len(self.estimators_)!=0, 'Run fit first. self.estimators_ is not defined'
         assert len(self._ensemble_X)!=0, 'Run evaluate_importance first. self._ensemble_X is not defined'
 
