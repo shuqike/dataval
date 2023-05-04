@@ -46,6 +46,7 @@ We compare the time and memory consumption of different setting pairs:
 3. [BARS Benchmark](https://openbenchmark.github.io/BARS/index.html#). BARS is a large, open benchmark for recommender systems.
 4. [DeepCTR](https://github.com/shenweichen/DeepCTR). DeepCTR is a easy-to-use, modular and extendible package of deep-learning based CTR(Clickthrough rate prediction) models along with lots of core components layers which can be used to easily build custom models.
 5. [TweetNLP](https://tweetnlp.org/).
+6. [Fast_pytorch_kmeans](https://github.com/DeMoriarty/fast_pytorch_kmeans). A pytorch implementation of K-means clustering algorithm.
 
 ## Repositories
 
