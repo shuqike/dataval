@@ -20,8 +20,9 @@ Why do we need to consider vector database? Search engine provides a nice online
 
 ## Implementation plan
 
-- [ ] Online supervised learning/continual learning algorithms
-- [ ] Online Truncated Monte Carlo
+- [ ] Truncated Monte Carlo Shapley algorithm
+- [ ] Gradient Shapley algorithm
+- [ ] Data out-of-bag algorithm
 - [ ] Mean field inference learning
 - [ ] Use stable-baselines3 + wandb + optuna
 - [ ] Connect the data valuation to vector database
