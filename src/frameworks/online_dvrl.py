@@ -111,7 +111,7 @@ class Odvrl(DynamicValuator):
 
     def evaluate(self, X, y):
         label_one_hot = torch.nn.functional.one_hot(y)
-        label_val_pred = self.val_model(X)
+        label_val_pred = self.val_model(torch.unsqueeze(X, 1))
         y_train_hat = torch.abs(label_one_hot - label_val_pred)
         values =  self.value_estimator(X, torch.unsqueeze(label_one_hot, 1), torch.unsqueeze(y_train_hat, 1))
         return values.cpu().detach().numpy()
@@ -210,11 +210,11 @@ class Odvrl(DynamicValuator):
             data_value_list = data_value_list.to(self.device)
             s_input = s_input.to(self.device)
             loss = dvrl_criterion(data_value_list, s_input, reward)
-            print(
-                'At step %d epoch %d, the reward is %f, the prob is %f' % (step_id, epoch, \
-                reward.cpu().detach().numpy()[0], \
-                np.max(data_value_list.cpu().detach().numpy()))
-            )
+            # print(
+            #     'At step %d epoch %d, the reward is %f, the prob is %f' % (step_id, epoch, \
+            #     reward.cpu().detach().numpy()[0], \
+            #     np.max(data_value_list.cpu().detach().numpy()))
+            # )
             loss.backward()
             dvrl_optimizer.step()
 
