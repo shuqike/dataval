@@ -20,8 +20,8 @@ Why do we need to consider vector database? Search engine provides a nice online
 
 ## Implementation plan
 
-- [ ] Truncated Monte Carlo Shapley algorithm
-- [ ] Gradient Shapley algorithm
+- [x] Truncated Monte Carlo Shapley algorithm
+- [x] Gradient Shapley algorithm
 - [ ] Data out-of-bag algorithm
 - [ ] Mean field inference learning
 - [ ] Use stable-baselines3 + wandb + optuna
