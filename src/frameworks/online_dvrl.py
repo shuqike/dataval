@@ -59,8 +59,8 @@ class Odvrl(DynamicValuator):
         # Basic RL parameters
         self.epsilon = 1e-8  # Adds to the log to avoid overflow
         self.threshold = 0.9  # Encourages exploration
-        self.inner_batch_size = parameters.inner_batch_size  # Batch size for validation 
-        self.outer_iterations = parameters.epoches
+        self.val_batch_size = parameters.val_batch_size  # Batch size for validation 
+        self.outer_iterations = parameters.epochs
 
         self.device = parameters.device
         self.num_workers = parameters.num_workers
@@ -69,7 +69,6 @@ class Odvrl(DynamicValuator):
         self.hidden_dim = parameters.hidden_dim
         self.output_dim = parameters.output_dim
         self.layer_number = parameters.layer_number
-        self.batch_size = parameters.batch_size
         self.learning_rate = parameters.learning_rate
 
         # prepare the original model, prediction model and validation model
@@ -91,7 +90,7 @@ class Odvrl(DynamicValuator):
         model.eval()
         model.to(self.device)
         val_dataset = utils.create_dataset(X=X_val, y=y_val)
-        val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=self.inner_batch_size, num_workers=self.num_workers, shuffle=True)
+        val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=self.val_batch_size, num_workers=self.num_workers, shuffle=True)
         for batch_data in val_loader:
             feature, label = batch_data
 
