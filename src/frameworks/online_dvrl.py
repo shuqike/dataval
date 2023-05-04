@@ -110,10 +110,14 @@ class Odvrl(DynamicValuator):
         return valid_perf
 
     def evaluate(self, X, y):
-        label_one_hot = torch.nn.functional.one_hot(y)
-        label_val_pred = self.val_model(torch.unsqueeze(X, 1))
+        X = torch.unsqueeze(X, 1)
+        X = X.to(self.device)
+        y = y.to(self.device)
+        label_one_hot = torch.nn.functional.one_hot(y).to(self.device)
+        label_val_pred = self.val_model(X.float())
         y_train_hat = torch.abs(label_one_hot - label_val_pred)
         values =  self.value_estimator(X, torch.unsqueeze(label_one_hot, 1), torch.unsqueeze(y_train_hat, 1))
+        values = torch.squeeze(values)
         return values.cpu().detach().numpy()
 
     def one_step(self, step_id, X, y, val_dataset):
