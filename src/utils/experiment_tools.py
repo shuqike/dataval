@@ -114,20 +114,21 @@ def create_noisy_mnist(noise_level='normal'):
     X_clusters = kmeans.predict(x_train)
     predicted_labels = infer_data_labels(X_clusters, cluster_labels)
 
+    # find out the noisy ones in advance
+    noisy_idxs = np.where(predicted_labels != y_train)[0]
+
     # replace training labels with noisy labels
-    Y = predicted_labels
+    # then return data and noisy indices
+    return x_train, predicted_labels, x_test, y_test, noisy_idxs
 
-    # wrap and return training dataset and test dataset
-    return CustomDataset(x_train, y_train), CustomDataset(x_test, y_test)
-
-def online_noisy_detection_experiment():
-    transform = torchvision.transforms.Compose([
-        torchvision.transforms.ToTensor(),
-        torchvision.transforms.Normalize((0.1307,), (0.3081,))
-    ])
-    train_dt = torchvision.datasets.MNIST('../data', train=True, download=True,transform=transform)
-    test_dt = torchvision.datasets.MNIST('../data', train=False, transform=transform)
-    # TODO:
+def online_noisy_detection_experiment(T=10, noise_level='normal'):
+    """
+    Args:
+        T: time horizon
+    """
+    x_train, y_train, x_test, y_test, noisy_idxs = create_noisy_mnist(noise_level=noise_level)
+    for t in range(T):
+        pass
 
 '''
 point removal task
