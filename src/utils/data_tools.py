@@ -3,6 +3,7 @@ import os, pickle, argparse, warnings
 import numpy as np
 import pandas as pd
 import torch
+import torchvision
 import openml
 
 
@@ -21,22 +22,24 @@ class CustomDataset(torch.utils.data.Dataset):
 
 
 class CustomDataloader:
+    """Refer to https://www.programcreek.com/python/example/125051/torch.utils.data.RandomSampler
+    """
     def __init__(self, X, y, batch_size) -> None:
         self.X = X
         self.y = y
         self.num_data = len(y)
         self.batch_size = batch_size
-        self.sampler = torch.data.samplers.Randomsampler()
+        self.sampler = torch.utils.data.RandomSampler(range(self.num_data))
 
     def __iter__(self):
         idxs = []
         for idx in self.sampler:
             idxs.append(idx)
             if len(idxs) == self.batch_size:
-                yield (self.X[idxs], self.y[idxs])
+                yield (torch.tensor(self.X[idxs]), torch.tensor(self.y[idxs]))
                 idxs = []
         if len(idxs) > 0:
-            yield (self.X[idxs], self.y[idxs])
+            yield (torch.tensor(self.X[idxs]), torch.tensor(self.y[idxs]))
 
 
 def create_dataset(X, y):
@@ -387,3 +390,69 @@ def preprocess_and_split_dataset(data, target, n_data_to_be_valued, n_val, n_tes
     print('-'*30)
     
     return (X, y), (X_val, y_val), (X_test, y_test)
+
+
+class MNIST_truncated(torch.utils.data.Dataset):
+
+    def __init__(self, root, dataidxs=None, train=True, transform=None, target_transform=None, download=False, y_train=None):
+
+        self.root = root
+        self.dataidxs = dataidxs
+        self.train = train
+        self.transform = transform
+        self.target_transform = target_transform
+        self.download = download
+
+        self.data, self.target = self.__build_truncated_dataset__()
+
+        if train and y_train != 'nmsl':
+            self.target = y_train[dataidxs]
+
+    def __build_truncated_dataset__(self):
+
+        mnist_dataobj = torchvision.datasets.MNIST(self.root, self.train, self.transform, self.target_transform, self.download)
+
+        # if self.train:
+        #     data = mnist_dataobj.train_data
+        #     target = mnist_dataobj.train_labels
+        # else:
+        #     data = mnist_dataobj.test_data
+        #     target = mnist_dataobj.test_labels
+
+        data = mnist_dataobj.data
+        target = mnist_dataobj.targets
+
+        if self.dataidxs is not None:
+            data = data[self.dataidxs]
+            target = target[self.dataidxs]
+
+        return data, target
+
+    def __getitem__(self, index):
+        """
+        Args:
+            index (int): Index
+
+        Returns:
+            tuple: (image, target) where target is index of the target class.
+        """
+        img, target = self.data[index], self.target[index]
+
+        # doing this so that it is consistent with all other datasets
+        # to return a PIL Image
+        from PIL import Image
+        img = Image.fromarray(img.numpy(), mode='L')
+
+        # print("mnist img:", img)
+        # print("mnist target:", target)
+
+        if self.transform is not None:
+            img = self.transform(img)
+
+        if self.target_transform is not None:
+            target = self.target_transform(target)
+
+        return img, target
+
+    def __len__(self):
+        return len(self.data)

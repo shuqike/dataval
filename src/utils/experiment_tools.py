@@ -1,11 +1,10 @@
 import warnings
 warnings.filterwarnings('ignore')
 import numpy as np
-import keras
 from sklearn.linear_model import LogisticRegression, LinearRegression
 from sklearn.cluster import KMeans
 import torchvision
-from src.utils.data_tools import CustomDataset
+from src.utils.data_tools import CustomDataset, MNIST_truncated
 
 
 '''
@@ -94,10 +93,24 @@ def infer_data_labels(X_labels, cluster_labels):
 
 def create_noisy_mnist(noise_level='normal'):
     # prepare data
-    (x_train, y_train), (x_test, y_test) = keras.datasets.mnist.load_data()
-    x_train = x_train.reshape(len(x_train),-1)
+    transform = torchvision.transforms.Compose([torchvision.transforms.ToTensor()])
+
+    mnist_train_ds = MNIST_truncated('../data', train=True, download=True, transform=transform, y_train='nmsl')
+    mnist_test_ds = MNIST_truncated('../data', train=False, download=True, transform=transform, y_train='nmsl')
+
+    x_train, y_train = mnist_train_ds.data, mnist_train_ds.target
+    x_test, y_test = mnist_test_ds.data, mnist_test_ds.target
+
+    x_train = x_train.data.numpy()
+    y_train = y_train.data.numpy()
+    x_test = x_test.data.numpy()
+    y_test = y_test.data.numpy()
+
+    x_train = x_train.reshape(len(x_train), -1)
+    x_test = x_test.reshape(len(x_test), -1)
     # normalize the data to 0 - 1
     x_train = x_train.astype(float) / 255.
+    x_test = x_test.astype(float) / 255.
 
     if noise_level == 'normal':
         n_clusters = 20
@@ -105,8 +118,10 @@ def create_noisy_mnist(noise_level='normal'):
         n_clusters = 64
     elif noise_level == 'high':
         n_clusters = 12
+    elif noise_level == 'none':
+        return x_train, y_train, x_test, y_test, []
     else:
-        raise NotImplementedError('Please choose noise level from [normal, low, high]')
+        raise NotImplementedError('Please choose noise level from [normal, low, high, none]')
     # use kmeans as a noisy annotator
     kmeans = KMeans(n_clusters = 20)
     kmeans.fit(x_train)

@@ -79,17 +79,16 @@ class Odvrl(DynamicValuator):
         # selection network
         self.value_estimator = Vestimator(
             input_dim=self.input_dim, 
-            layer_number=self.layer_number, 
-            hidden_dim=self.hidden_dim, 
+            layer_num=self.layer_number, 
+            hidden_num=self.hidden_dim, 
             output_dim=self.output_dim
         )
 
-    def _test_acc(self, model, X_val, y_val):
+    def _test_acc(self, model, val_dataset):
         pred_list = []
         label_list = []
         model.eval()
         model.to(self.device)
-        val_dataset = utils.create_dataset(X=X_val, y=y_val)
         val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=self.val_batch_size, num_workers=self.num_workers, shuffle=True)
         for batch_data in val_loader:
             feature, label = batch_data
@@ -109,12 +108,12 @@ class Odvrl(DynamicValuator):
         valid_perf = sum(1 for x, y in zip(pred_list, label_list) if x == y) / len(pred_list)  # accuracy
         return valid_perf
 
-    def one_step(self, X, y, X_val, y_val, progress_bar):
+    def one_step(self, X, y, val_dataset, progress_bar):
         """Train value estimator, estimate OOB values
         """
         # first OOB with baseline performance
         # baseline performance
-        valid_perf = self._test_acc(self.ori_model, X_val, y_val)
+        valid_perf = self._test_acc(self.ori_model, val_dataset)
 
         # load evaluation network to device
         self.value_estimator = self.value_estimator.to(self.device)
@@ -153,6 +152,8 @@ class Odvrl(DynamicValuator):
                     pre_optimizer.zero_grad()
 
                     feature, label = batch_data
+                    print(feature)
+                    print(label)
                     feature = feature.to(self.device)
                     label = label.to(self.device)
                     label_one_hot = torch.nn.functional.one_hot(label)
@@ -185,7 +186,7 @@ class Odvrl(DynamicValuator):
             pred_list = []
             label_list = []
             # test the performance of the new model
-            dvrl_perf = self._test_acc(new_model, X_val, y_val)
+            dvrl_perf = self._test_acc(new_model, val_dataset)
             reward = dvrl_perf - valid_perf
 
             if reward > best_reward:
