@@ -22,9 +22,9 @@ Why do we need to consider vector database? Search engine provides a nice online
 
 - [x] Truncated Monte Carlo Shapley algorithm
 - [x] Gradient Shapley algorithm
-- [ ] Data out-of-bag algorithm
+- [x] Data out-of-bag algorithm
+- [ ] Data unlearning for rl-based valuation
 - [ ] Mean field inference learning
-- [ ] Use stable-baselines3 + wandb + optuna
 - [ ] Connect the data valuation to vector database
 - [ ] Parallelization of all the algorithms
 

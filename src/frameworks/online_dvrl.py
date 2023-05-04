@@ -54,11 +54,12 @@ class Odvrl(DynamicValuator):
         self.n_trees=n_trees
         self.reset()
 
-        # Basic parameters
+        # Basic RL parameters
         self.epsilon = 1e-8  # Adds to the log to avoid overflow
         self.threshold = 0.9  # Encourages exploration
-        self.device = parameters.device
+        self.outer_iterations = parameters.epoches
 
+        self.device = parameters.device
         # Network parameters for data value estimator
         self.input_dim = parameters.input_dim
         self.hidden_dim = parameters.hidden_dim
@@ -113,6 +114,7 @@ class Odvrl(DynamicValuator):
 
         # first OOB with baseline performance
         self._calc_oob(X, y, X_val, y_val)
+        print('First round weak learner performance F1: %f' % self.data_value_dict[f'base_metric'])
 
         self.value_estimator = self.value_estimator.to(self.device)
         # loss function
@@ -122,4 +124,11 @@ class Odvrl(DynamicValuator):
         # learning rate scheduler
         scheduler = torch.optim.lr_scheduler.ExponentialLR(dvrl_optimizer, gamma=0.999)
 
-        print('First round weak learner performance F1: %f' % self.data_value_dict[f'base_metric'])
+        best_reward = 0
+        for epoch in range(self.outer_iterations):
+            # change learning rate
+            scheduler.step()
+            # clean up grads
+            self.value_estimator.train()
+            self.value_estimator.zero_grad()
+            dvrl_optimizer.zero_grad()
