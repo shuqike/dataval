@@ -109,6 +109,13 @@ class Odvrl(DynamicValuator):
         valid_perf = sum(1 for x, y in zip(pred_list, label_list) if x == y) / len(pred_list)  # accuracy
         return valid_perf
 
+    def evaluate(self, X, y):
+        label_one_hot = torch.nn.functional.one_hot(y)
+        label_val_pred = self.val_model(X)
+        y_train_hat = torch.abs(label_one_hot - label_val_pred)
+        values =  self.value_estimator(X, torch.unsqueeze(label_one_hot, 1), torch.unsqueeze(y_train_hat, 1))
+        return values.cpu().detach().numpy()
+
     def one_step(self, step_id, X, y, val_dataset):
         """Train value estimator, estimate OOB values
         """

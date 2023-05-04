@@ -1,5 +1,6 @@
 import warnings
 warnings.filterwarnings('ignore')
+import copy
 import numpy as np
 from sklearn.linear_model import LogisticRegression, LinearRegression
 from sklearn.cluster import KMeans
@@ -91,7 +92,7 @@ def infer_data_labels(X_labels, cluster_labels):
 
     return predicted_labels
 
-def create_noisy_mnist(noise_level='normal'):
+def create_noisy_mnist(method='uniform', noise_level='normal'):
     # prepare data
     transform = torchvision.transforms.Compose([
         torchvision.transforms.ToTensor(), 
@@ -109,25 +110,33 @@ def create_noisy_mnist(noise_level='normal'):
     x_test = x_test.data.numpy()
     y_test = y_test.data.numpy()
 
-    if noise_level == 'normal':
-        n_clusters = 20
-    elif noise_level == 'low':
-        n_clusters = 64
-    elif noise_level == 'high':
-        n_clusters = 12
-    elif noise_level == 'none':
-        return x_train, y_train, x_test, y_test, []
-    else:
-        raise NotImplementedError('Please choose noise level from [normal, low, high, none]')
-    # use kmeans as a noisy annotator
-    kmeans = KMeans(n_clusters = 20)
-    kmeans.fit(x_train)
-    cluster_labels = infer_cluster_labels(kmeans, y_train)
-    X_clusters = kmeans.predict(x_train)
-    predicted_labels = infer_data_labels(X_clusters, cluster_labels)
+    if method == 'kmeans':
+        if noise_level == 'normal':
+            n_clusters = 20
+        elif noise_level == 'low':
+            n_clusters = 64
+        elif noise_level == 'high':
+            n_clusters = 12
+        elif noise_level == 'none':
+            return x_train, y_train, x_test, y_test, []
+        else:
+            raise NotImplementedError('Please choose noise level from [normal, low, high, none]')
+        # use kmeans as a noisy annotator
+        kmeans = KMeans(n_clusters = 20)
+        kmeans.fit(x_train)
+        cluster_labels = infer_cluster_labels(kmeans, y_train)
+        X_clusters = kmeans.predict(x_train)
+        predicted_labels = infer_data_labels(X_clusters, cluster_labels)
+        # find out the noisy ones in advance
+        noisy_idxs = np.where(predicted_labels != y_train)[0]
 
-    # find out the noisy ones in advance
-    noisy_idxs = np.where(predicted_labels != y_train)[0]
+    elif method == 'uniform':
+        noisy_idxs = np.random.choice(len(y_train), int(noise_level*len(y_train)))
+        predicted_labels = copy.deepcopy(y_train)
+        for i in noisy_idxs:
+            predicted_labels[i] = np.random.randint(10)
+            if predicted_labels[i] >= y_train[i]:
+                predicted_labels[i] = (predicted_labels[i]+1)%10
 
     # replace training labels with noisy labels
     # then return data and noisy indices
