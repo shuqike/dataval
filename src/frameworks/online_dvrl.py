@@ -54,6 +54,8 @@ class Odvrl(DynamicValuator):
         """
         self.num_weak=num_weak
 
+        self.saving_path = parameters.saving_path  # '../logs/odvrl/selection_network'
+
         # Basic RL parameters
         self.epsilon = 1e-8  # Adds to the log to avoid overflow
         self.threshold = 0.9  # Encourages exploration
@@ -213,7 +215,7 @@ class Odvrl(DynamicValuator):
                 torch.save(
                     self.value_estimator.state_dict(), 
                     os.path.join(
-                        '../logs/odvrl/selection_network', 
+                        self.saving_path, 
                         'net_epoch%d.pth' % (epoch + 1)
                     )
                 )
