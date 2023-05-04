@@ -23,8 +23,7 @@ class SimpDataOOB(StaticValuator):
             (X_val,y_val): (inputs,outputs) to be used for utility evaluation.
             problem: "clf"
             model_family: The model family used for learning algorithm
-            GR_threshold: Gelman-Rubin threshold for convergence criteria
-            max_iters: maximum number of iterations (for a fixed cardinality)
+            n_trees: B, number of weak learner models
         """
         self.X=X
         self.y=y
