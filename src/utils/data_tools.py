@@ -17,11 +17,26 @@ class CustomDataset(torch.utils.data.Dataset):
         return len(self.y)
 
     def __getitem__(self, idx):
-        item = {
-            'features': self.X[idx],
-            'labels': torch.tensor(self.y[idx]),
-        }
-        return item
+        return self.X[idx], self.y[idx]
+
+
+class CustomDataloader:
+    def __init__(self, X, y, batch_size) -> None:
+        self.X = X
+        self.y = y
+        self.num_data = len(y)
+        self.batch_size = batch_size
+        self.sampler = torch.data.samplers.Randomsampler()
+
+    def __iter__(self):
+        idxs = []
+        for idx in self.sampler:
+            idxs.append(idx)
+            if len(idxs) == self.batch_size:
+                yield (self.X[idxs], self.y[idxs])
+                idxs = []
+        if len(idxs) > 0:
+            yield (self.X[idxs], self.y[idxs])
 
 
 def create_dataset(X, y):
