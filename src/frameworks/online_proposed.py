@@ -49,6 +49,7 @@ class Proposed(DynamicValuator):
         Args:
             num_weak: B, number of weak learner models
         """
+        self.is_debug = parameters.is_debug
         self.discover_step = 0
         self.num_weak=num_weak
 
@@ -116,18 +117,21 @@ class Proposed(DynamicValuator):
         self.oob_raw[idxs] += rf_model.oob_raw_for_rl
         return np.divide(self.oob_raw[idxs], self.oob_cnt[idxs])
 
-    def _calc_discover_rate(self):
+    def _calc_discover_rate(self, method='proposed'):
         if self.corrupted_num == 0:
             return
-        self.discover_step += 1
-        values = []
-        for i in range(self.num_data // self.val_batch_size):
-            part_values = self.evaluate(
-                self.X[i*self.val_batch_size: min((i+1)*self.val_batch_size, self.num_data)], 
-                self.y[i*self.val_batch_size: min((i+1)*self.val_batch_size, self.num_data)]
-            )
-            values = np.concatenate((values, part_values))
-        guess_idxs = np.argsort(values)
+        if self.is_debug:
+            guess_idxs = np.argsort(np.divide(self.oob_raw, self.oob_cnt))
+        else:
+            self.discover_step += 1
+            values = []
+            for i in range(self.num_data // self.val_batch_size):
+                part_values = self.evaluate(
+                    self.X[i*self.val_batch_size: min((i+1)*self.val_batch_size, self.num_data)], 
+                    self.y[i*self.val_batch_size: min((i+1)*self.val_batch_size, self.num_data)]
+                )
+                values = np.concatenate((values, part_values))
+            guess_idxs = np.argsort(values)
         print(guess_idxs[:10])
         print(self.noisy_idxs[:10])
         discover_rate = len(np.intersect1d(guess_idxs[:self.corrupted_num], self.noisy_idxs)) / self.corrupted_num
