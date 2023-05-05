@@ -166,7 +166,7 @@ class Proposed(DynamicValuator):
             data_value_list = []
             s_input = []
 
-            for batch_si in (128, 256):
+            for batch_si in (64, 128, 256, 512):
                 train_loader = utils.CustomDataloader(X=X, y=y, batch_size=int(batch_si))
                 for batch_data in train_loader:
                     self.val_model.eval()
@@ -233,11 +233,6 @@ class Proposed(DynamicValuator):
             data_value_list = data_value_list.to(self.device)
             s_input = s_input.to(self.device)
             loss = dvrl_criterion(data_value_list, s_input, reward)
-            print(
-                'At step %d epoch %d, the reward is %f, the prob is %f' % (step_id, epoch, \
-                reward.cpu().detach().numpy()[0], \
-                np.max(data_value_list.cpu().detach().numpy()))
-            )
             loss.backward()
             dvrl_optimizer.step()
 
@@ -245,7 +240,7 @@ class Proposed(DynamicValuator):
             utils.super_save()
             
             # wandb log
-            wandb.log({'step': step_id, 'epoch': epoch, 'reward': reward})
+            wandb.log({'step': step_id*self.outer_iterations+epoch, 'reward': reward, 'prob': np.max(data_value_list.cpu().detach().numpy())})
 
             if flag_save or epoch % 50 ==0:
                 torch.save(
