@@ -176,6 +176,7 @@ class ResVestimatorMNIST(torch.nn.Module):
         output = self.combine_layer(x)
         return output
 
+
 class R18VestimatorMNIST(torch.nn.Module):
     def __init__(self) -> None:
         super().__init__()
@@ -196,4 +197,57 @@ class R18VestimatorMNIST(torch.nn.Module):
         x = self.fc(x.float())
         x = torch.cat([x, y_hat_diff], dim=1)
         x = self.combine_layer(x)
+        return x
+
+
+class LeVestimatorMNIST(torch.nn.Module):
+    def __init__(self) -> None:
+        super().__init__()
+        self.conv = torch.nn.Sequential(
+            torch.nn.Conv2d(1, 20, 5, 1),
+            torch.nn.MaxPool2d(2, 2),
+            torch.nn.ReLU(),
+            torch.nn.Conv2d(20, 50, 5, 1),
+            torch.nn.MaxPool2d(2, 2),
+            torch.nn.ReLU()
+        )
+        self.block_1 = torch.nn.Sequential(
+            torch.nn.Linear(4 * 4 * 50, 500),
+            torch.nn.ReLU(),
+            torch.nn.Linear(500, 10),
+            torch.nn.ReLU()
+        )
+        self.adapter = torch.nn.Linear(10, 10)
+        self.block_2 = torch.nn.Sequential(
+            torch.nn.Linear(20, 10),
+            torch.nn.ReLU()
+        )
+        self.block_3 = torch.nn.Sequential(
+            torch.nn.Linear(20, 1),
+            torch.nn.Sigmoid()
+        )
+
+    def freeze_encoder(self):
+        # freeze feature processor
+        self.conv.requires_grad_ = False
+        self.block_1.requires_grad_ = False
+
+    def classify(self, x):
+        x = self.conv(x.float())
+        x = x.view(-1, 4 * 4 * 50)
+        x = self.block_1(x)
+        x = torch.nn.functional.softmax(self.adapter(x), dim=1)
+        return x
+
+    def forward(self, x, y, y_hat_diff):
+        # process the feature only
+        x = self.conv(x.float())
+        x = x.view(-1, 4 * 4 * 50)
+        x = self.block_1(x)
+        # process the whole datum
+        x = torch.cat([x, y], dim=1)
+        x = self.block_2(x)
+        # process the difference info
+        x = torch.cat([x, y_hat_diff], dim=1)
+        x = self.block_3(x)
         return x

@@ -145,6 +145,7 @@ class Odvrl(DynamicValuator):
             # clean up grads
             self.value_estimator.train()
             self.value_estimator.zero_grad()
+            self.value_estimator.freeze_encoder()
             dvrl_optimizer.zero_grad()
             
             # train predictor from scratch everytime
@@ -192,9 +193,6 @@ class Odvrl(DynamicValuator):
                     # back propagation
                     loss.mean().backward()
                     pre_optimizer.step()
-
-                    del batch_data, feature, label, label_one_hot, label_val_pred, y_pred_diff, output
-                    utils.super_save()
 
                 del train_loader
                 utils.super_save()
