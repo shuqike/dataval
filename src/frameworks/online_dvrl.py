@@ -6,6 +6,7 @@ warnings.filterwarnings("ignore")
 import tqdm
 import numpy as np
 import torch
+import wandb
 import src.utils as utils
 from src.frameworks.valuator import DynamicValuator
 from src.models import Vestimator
@@ -226,6 +227,9 @@ class Odvrl(DynamicValuator):
 
             del new_model
             utils.super_save()
+
+            # wandb log
+            wandb.log({'step': step_id, 'epoch': epoch, 'reward': reward})
 
             if flag_save or epoch % 50 ==0:
                 torch.save(
