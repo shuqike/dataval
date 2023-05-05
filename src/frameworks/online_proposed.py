@@ -117,10 +117,15 @@ class Proposed(DynamicValuator):
         return np.divide(self.oob_raw[idxs], self.oob_cnt[idxs])
 
     def _calc_discover_rate(self):
+        if self.corrupted_num == 0:
+            return
         self.discover_step += 1
         values = []
-        for i in range(self.subset_len // self.val_batch_size):
-            part_values = self.evaluate(self.X[i*128: min((i+1)*128, self.num_data)], self.y[i*128: min((i+1)*128, self.num_data)])
+        for i in range(self.num_data // self.val_batch_size):
+            part_values = self.evaluate(
+                self.X[i*self.val_batch_size: min((i+1)*self.val_batch_size, self.num_data)], 
+                self.y[i*self.val_batch_size: min((i+1)*self.val_batch_size, self.num_data)]
+            )
             values = np.concatenate((values, part_values))
         guess_idxs = np.argsort(values)
         print(guess_idxs[:10])
@@ -129,6 +134,7 @@ class Proposed(DynamicValuator):
         wandb.log({'discover_step': self.discover_step, 'discover rate': discover_rate})
 
     def evaluate(self, X, y):
+        print(X.shape, y.shape)
         self.val_model.eval()
         X = torch.unsqueeze(X, 1)
         X = X.to(self.device)
@@ -146,6 +152,7 @@ class Proposed(DynamicValuator):
         # initialize OOB memory
         self.X = X
         self.y = y
+        self.subset_len = subset_len
         self.num_data = len(y)
         self.corrupted_num = corrupted_num
         self.noisy_idxs = noisy_idxs
