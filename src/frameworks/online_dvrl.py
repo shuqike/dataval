@@ -111,6 +111,7 @@ class Odvrl(DynamicValuator):
         return valid_perf
 
     def evaluate(self, X, y):
+        self.val_model.eval()
         X = torch.unsqueeze(X, 1)
         X = X.to(self.device)
         y = y.to(self.device)
@@ -138,8 +139,6 @@ class Odvrl(DynamicValuator):
         scheduler = torch.optim.lr_scheduler.ExponentialLR(dvrl_optimizer, gamma=0.999)
 
         best_reward = 0
-        # prepare loaders
-        loaders = [utils.CustomDataloader(X=X, y=y, batch_size=int(b)) for b in (16, 32, 64)]
         for epoch in range(self.outer_iterations):
             # change learning rate
             scheduler.step()
@@ -158,8 +157,10 @@ class Odvrl(DynamicValuator):
             data_value_list = []
             s_input = []
 
-            for train_loader in loaders:
+            for batch_si in (16, 32):
+                train_loader = utils.CustomDataloader(X=X, y=y, batch_size=int(batch_si))
                 for batch_data in train_loader:
+                    self.val_model.eval()
                     new_model.train()
                     new_model.zero_grad()
                     pre_optimizer.zero_grad()
@@ -167,11 +168,9 @@ class Odvrl(DynamicValuator):
                     feature, label = batch_data
                     feature = feature.to(self.device)
                     label = label.to(self.device)
-                    print(label.shape)
-                    label_one_hot = torch.nn.functional.one_hot(label)
+                    label_one_hot = torch.nn.functional.one_hot(label, num_classes=10)
                     label_val_pred = self.val_model(feature.float())
 
-                    print(label_one_hot.shape, label_val_pred.shape)
                     y_pred_diff = torch.abs(label_one_hot - label_val_pred)
 
                     # selection estimation
@@ -194,9 +193,12 @@ class Odvrl(DynamicValuator):
                     loss.mean().backward()
                     pre_optimizer.step()
 
-            # dvrl performance
-            pred_list = []
-            label_list = []
+                    del batch_data, feature, label, label_one_hot, label_val_pred, y_pred_diff, output
+                    utils.super_save()
+
+                del train_loader
+                utils.super_save()
+
             # test the performance of the new model
             dvrl_perf = self._test_acc(new_model, val_dataset)
             reward = dvrl_perf - valid_perf
@@ -215,13 +217,16 @@ class Odvrl(DynamicValuator):
             data_value_list = data_value_list.to(self.device)
             s_input = s_input.to(self.device)
             loss = dvrl_criterion(data_value_list, s_input, reward)
-            # print(
-            #     'At step %d epoch %d, the reward is %f, the prob is %f' % (step_id, epoch, \
-            #     reward.cpu().detach().numpy()[0], \
-            #     np.max(data_value_list.cpu().detach().numpy()))
-            # )
+            print(
+                'At step %d epoch %d, the reward is %f, the prob is %f' % (step_id, epoch, \
+                reward.cpu().detach().numpy()[0], \
+                np.max(data_value_list.cpu().detach().numpy()))
+            )
             loss.backward()
             dvrl_optimizer.step()
+
+            del new_model
+            utils.super_save()
 
             if flag_save or epoch % 50 ==0:
                 torch.save(
