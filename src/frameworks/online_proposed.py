@@ -60,7 +60,8 @@ class Proposed(DynamicValuator):
 
         self.device = parameters.device
         self.num_workers = parameters.num_workers
-        self.learning_rate = parameters.learning_rate
+        self.vest_learning_rate = parameters.vest_learning_rate
+        self.pred_learning_rate = parameters.pred_learning_rate
 
         # prepare the original model, prediction model and validation model
         self.ori_model = copy.deepcopy(pred_model)
@@ -140,7 +141,7 @@ class Proposed(DynamicValuator):
         # loss function
         dvrl_criterion = ProposedLoss(self.epsilon).to(self.device)
         # optimizer
-        dvrl_optimizer = torch.optim.Adam(self.value_estimator.parameters(), lr=self.learning_rate)
+        dvrl_optimizer = torch.optim.Adam(self.value_estimator.parameters(), lr=self.vest_learning_rate)
         # learning rate scheduler
         scheduler = torch.optim.lr_scheduler.ExponentialLR(dvrl_optimizer, gamma=0.999)
 
@@ -158,7 +159,7 @@ class Proposed(DynamicValuator):
             new_model = copy.copy(self.pred_model)
             new_model.to(self.device)
             # predictor optimizer
-            pre_optimizer = torch.optim.Adam(new_model.parameters(), lr=self.learning_rate)
+            pre_optimizer = torch.optim.Adam(new_model.parameters(), lr=self.pred_learning_rate)
 
             # use a list save all s_input and data values
             data_value_list = []
