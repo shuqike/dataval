@@ -193,6 +193,7 @@ class Frequp(DynamicValuator):
             self.value_estimator.zero_grad()
             self.value_estimator.freeze_encoder()
             dvrl_optimizer.zero_grad()
+            freqsum = 0
 
             # train predictor from scratch everytime
             new_model = copy.copy(self.pred_model)
@@ -229,9 +230,7 @@ class Frequp(DynamicValuator):
                         )
                         est_dv_curr = torch.unsqueeze(torch.tensor(est_dv_curr), dim=1)
                         est_dv_curr_hat = self.value_estimator(feature, label_one_hot, y_pred_diff)
-                        loss = freq_criterion(est_dv_curr, est_dv_curr_hat)
-                        loss.backward()
-                        dvrl_optimizer.step()
+                        freqsum += freq_criterion(est_dv_curr.float(), est_dv_curr_hat)
                     else:
                         est_dv_curr = self.value_estimator(feature, label_one_hot, y_pred_diff)
                         est_dv_curr = est_dv_curr.to('cpu')
@@ -276,7 +275,7 @@ class Frequp(DynamicValuator):
             reward = reward.to(self.device)
             data_value_list = data_value_list.to(self.device)
             s_input = s_input.to(self.device)
-            loss = dvrl_criterion(data_value_list, s_input, reward)
+            loss = freqsum + dvrl_criterion(data_value_list, s_input, reward)
             loss.backward()
             dvrl_optimizer.step()
 
