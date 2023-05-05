@@ -135,7 +135,7 @@ def create_noisy_mnist(method='uniform', noise_level='normal'):
         predicted_labels = copy.deepcopy(y_train)
         for i in noisy_idxs:
             predicted_labels[i] = np.random.randint(10)
-            if predicted_labels[i] >= y_train[i]:
+            if predicted_labels[i] == y_train[i]:
                 predicted_labels[i] = (predicted_labels[i]+1)%10
 
     # replace training labels with noisy labels
