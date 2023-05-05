@@ -65,6 +65,7 @@ class Proposed(DynamicValuator):
         self.num_workers = parameters.num_workers
         self.vest_learning_rate = parameters.vest_learning_rate
         self.pred_learning_rate = parameters.pred_learning_rate
+        self.vest_lr_scheduler = parameters.vest_lr_scheduler
 
         # prepare the original model, prediction model and validation model
         self.ori_model = copy.deepcopy(pred_model)
@@ -175,7 +176,12 @@ class Proposed(DynamicValuator):
         # optimizer
         dvrl_optimizer = torch.optim.Adam(self.value_estimator.parameters(), lr=self.vest_learning_rate)
         # learning rate scheduler
-        scheduler = torch.optim.lr_scheduler.ExponentialLR(dvrl_optimizer, gamma=0.999)
+        if self.vest_lr_scheduler == 'exponential':
+            scheduler = torch.optim.lr_scheduler.ExponentialLR(dvrl_optimizer, gamma=0.999)
+        elif self.vest_lr_scheduler == 'constant':
+            scheduler = torch.optim.lr_scheduler.ConstantLR(dvrl_optimizer, factor=1)
+        else:
+            raise NotImplementedError('this learning rate scheduler is not implemented!')
 
         best_reward = 0
         for epoch in range(self.outer_iterations):
