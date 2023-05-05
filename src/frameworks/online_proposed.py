@@ -49,6 +49,7 @@ class Proposed(DynamicValuator):
         Args:
             num_weak: B, number of weak learner models
         """
+        self.discover_step = 0
         self.num_weak=num_weak
 
         self.saving_path = parameters.saving_path  # '../logs/odvrl/selection_network'
@@ -115,6 +116,18 @@ class Proposed(DynamicValuator):
         self.oob_raw[idxs] += rf_model.oob_raw_for_rl
         return np.divide(self.oob_raw[idxs], self.oob_cnt[idxs])
 
+    def _calc_discover_rate(self):
+        self.discover_step += 1
+        values = []
+        for i in range(self.subset_len // self.val_batch_size):
+            part_values = self.evaluate(self.X[i*128: min((i+1)*128, self.num_data)], self.y[i*128: min((i+1)*128, self.num_data)])
+            values = np.concatenate((values, part_values))
+        guess_idxs = np.argsort(values)
+        print(guess_idxs[:10])
+        print(self.noisy_idxs[:10])
+        discover_rate = len(np.intersect1d(guess_idxs[:self.corrupted_num], self.noisy_idxs)) / self.corrupted_num
+        wandb.log({'discover_step': self.discover_step, 'discover rate': discover_rate})
+
     def evaluate(self, X, y):
         self.val_model.eval()
         X = torch.unsqueeze(X, 1)
@@ -127,10 +140,17 @@ class Proposed(DynamicValuator):
         values = torch.squeeze(values)
         return values.cpu().detach().numpy()
 
-    def one_step(self, step_id, X, y, val_dataset):
+    def one_step(self, step_id, X, y, val_dataset, subset_len, corrupted_num, noisy_idxs, discover_record_interval):
         """Train value estimator, estimate OOB values
         """
         # initialize OOB memory
+        self.X = X
+        self.y = y
+        self.num_data = len(y)
+        self.corrupted_num = corrupted_num
+        self.noisy_idxs = noisy_idxs
+        self.step_id = step_id
+        self.discover_record_interval = discover_record_interval
         self.oob_raw = np.ones(len(y))
         self.oob_cnt = np.ones(len(X))
 
@@ -213,7 +233,9 @@ class Proposed(DynamicValuator):
                     pre_optimizer.step()
 
                 del train_loader
-                utils.super_save()
+                
+                if self.device == 'cuda':
+                    utils.super_save()
 
             # test the performance of the new model
             dvrl_perf = self._test_acc(new_model, val_dataset)
@@ -237,10 +259,15 @@ class Proposed(DynamicValuator):
             dvrl_optimizer.step()
 
             del new_model
-            utils.super_save()
+            
+            if self.device == 'cuda':
+                utils.super_save()
             
             # wandb log
             wandb.log({'step': step_id*self.outer_iterations+epoch, 'reward': reward, 'prob': np.max(data_value_list.cpu().detach().numpy())})
+
+            if epoch % self.discover_record_interval == 0:
+                self._calc_discover_rate()
 
             if flag_save or epoch % 50 ==0:
                 torch.save(

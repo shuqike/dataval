@@ -197,7 +197,9 @@ class Odvrl(DynamicValuator):
                     pre_optimizer.step()
 
                 del train_loader
-                utils.super_save()
+
+                if self.device == 'cuda':
+                    utils.super_save()
 
             # test the performance of the new model
             dvrl_perf = self._test_acc(new_model, val_dataset)
@@ -221,7 +223,9 @@ class Odvrl(DynamicValuator):
             dvrl_optimizer.step()
 
             del new_model
-            utils.super_save()
+            
+            if self.device == 'cuda':
+                utils.super_save()
 
             # wandb log
             wandb.log({'step': step_id*self.outer_iterations+epoch, 'reward': reward, 'prob': np.max(data_value_list.cpu().detach().numpy())})

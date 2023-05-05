@@ -131,7 +131,7 @@ def create_noisy_mnist(method='uniform', noise_level='normal'):
         noisy_idxs = np.where(predicted_labels != y_train)[0]
 
     elif method == 'uniform':
-        noisy_idxs = np.random.choice(len(y_train), int(noise_level*len(y_train)))
+        noisy_idxs = np.random.choice(len(y_train), int(noise_level*len(y_train)), replace=False)
         predicted_labels = copy.deepcopy(y_train)
         for i in noisy_idxs:
             predicted_labels[i] = np.random.randint(10)
