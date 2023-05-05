@@ -379,12 +379,15 @@ class RandomForestClassifierDV(RandomForestClassifier):
         assert len(self.estimators_)!=0, 'Run fit first. self.estimators_ is not defined'
         assert len(self._ensemble_X)!=0, 'Run evaluate_importance first. self._ensemble_X is not defined'
 
+        self.oob_cnt_for_rl = np.ones(len(y)) * 1e-7
         oob_performance=[]
         for i, weak_learner in enumerate(self.estimators_):
-            oob_ind=np.where(self._ensemble_X[i] == 0)[0]
-            oob_acc=(weak_learner.predict(X[oob_ind])==y[oob_ind]).astype(float)
-            oob_performance.append({oob_ind[ind]: j for ind, j in enumerate(oob_acc)})     
+            oob_ind=np.where(self._ensemble_X[i] == 0)[0]  # a list of non-participators' indices
+            oob_acc=(weak_learner.predict(X[oob_ind])==y[oob_ind]).astype(float)  # a list of their test results, success=1, failure=0
+            oob_performance.append({oob_ind[ind]: j for ind, j in enumerate(oob_acc)})
+            self.oob_cnt_for_rl[oob_ind] += 1
         df_oob=pd.DataFrame(oob_performance)[np.arange(len(X))]
+        self.oob_raw_for_rl = np.sum(df_oob, axis=0)
 
         return np.mean(df_oob, axis=0)
 

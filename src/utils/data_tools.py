@@ -32,14 +32,14 @@ class CustomDataloader:
         self.sampler = torch.utils.data.RandomSampler(range(self.num_data))
 
     def __iter__(self):
-        idxs = []
+        self.idxs = []
         for idx in self.sampler:
-            idxs.append(idx)
-            if len(idxs) == self.batch_size:
-                yield (self.X[idxs], self.y[idxs])
-                idxs = []
-        if len(idxs) > 0:
-            yield (self.X[idxs], self.y[idxs])
+            self.idxs.append(idx)
+            if len(self.idxs) == self.batch_size:
+                yield (self.X[self.idxs], self.y[self.idxs])
+                self.idxs = []
+        if len(self.idxs) > 0:
+            yield (self.X[self.idxs], self.y[self.idxs])
 
 
 def create_dataset(X, y):

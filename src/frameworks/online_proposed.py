@@ -1,25 +1,22 @@
 import os
 import copy
-from time import time
 import warnings
 warnings.filterwarnings("ignore")
-import tqdm
 import numpy as np
 import torch
 import src.utils as utils
 from src.frameworks.valuator import DynamicValuator
-from src.models import Vestimator
+from src.models import RandomForestClassifierDV
 
 
-class DvrlLoss(torch.nn.Module):
-    def __init__(self, epsilon, threshold):
+class ProposedLoss(torch.nn.Module):
+    def __init__(self, epsilon):
         """Construct class
         :param epsilon: Used to avoid log(0)
         :param threshold: The exploration rate
         """
         super().__init__()
         self.epsilon = epsilon
-        self.threshold = threshold
 
     def forward(self, est_data_value, s_input, reward_input):
         """Calculate the loss.
@@ -29,7 +26,6 @@ class DvrlLoss(torch.nn.Module):
         """
         # Generator loss (REINFORCE algorithm)
         one = torch.ones_like(est_data_value, dtype=est_data_value.dtype)
-        # TODO: incorporate OOB value
         prob = torch.sum(s_input * torch.log(est_data_value + self.epsilon) + \
                          (one - s_input) * \
                          torch.log(one - est_data_value + self.epsilon))
@@ -38,14 +34,14 @@ class DvrlLoss(torch.nn.Module):
         zero = zero.to(est_data_value.device)
 
         dve_loss = (-reward_input * prob) + \
-                   1e3 * torch.maximum(torch.mean(est_data_value) - self.threshold, zero) + \
-                   1e3 * torch.maximum(1 - self.threshold - torch.mean(est_data_value), zero)
+                   1e3 * torch.mean(est_data_value) + \
+                   1e3 * (1 - torch.mean(est_data_value))
 
         return dve_loss
 
 
-class Odvrl(DynamicValuator):
-    """Online Data Valuation using Reinforcement Learning (DVRL) class.
+class Proposed(DynamicValuator):
+    """Online Data Valuation using Reinforcement Learning (DVRL) and OOB class.
     """
     def __init__(self, num_weak, pred_model, val_model, value_estimator, parameters) -> None:
         """
@@ -58,17 +54,12 @@ class Odvrl(DynamicValuator):
 
         # Basic RL parameters
         self.epsilon = 1e-8  # Adds to the log to avoid overflow
-        self.threshold = parameters.threshold  # Encourages exploration
+        self.threshold = 0.9  # Encourages exploration
         self.val_batch_size = parameters.val_batch_size  # Batch size for validation 
         self.outer_iterations = parameters.epochs
 
         self.device = parameters.device
         self.num_workers = parameters.num_workers
-        # Network parameters for data value estimator
-        # self.input_dim = parameters.input_dim
-        # self.hidden_dim = parameters.hidden_dim
-        # self.output_dim = parameters.output_dim
-        # self.layer_number = parameters.layer_number
         self.learning_rate = parameters.learning_rate
 
         # prepare the original model, prediction model and validation model
@@ -79,12 +70,14 @@ class Odvrl(DynamicValuator):
 
         # selection network
         self.value_estimator = value_estimator
-        # self.value_estimator = Vestimator(
-        #     input_dim=self.input_dim, 
-        #     layer_num=self.layer_number, 
-        #     hidden_num=self.hidden_dim, 
-        #     output_dim=self.output_dim
-        # )
+
+        # exploration strategy
+        if parameters.explore_strategy == 'constant':
+            self.explorer = utils.ConstantExplorer(parameters.epsilon0)
+        elif parameters.explore_strategy == 'linear':
+            self.explorer = utils.LinearExplorer(parameters.epsilon0)
+        elif parameters.explore_strategy == 'exponential':
+            self.explorer = utils.ExponentialExplorer(parameters.epsilon0)
 
     def _test_acc(self, model, val_dataset):
         pred_list = []
@@ -110,6 +103,16 @@ class Odvrl(DynamicValuator):
         valid_perf = sum(1 for x, y in zip(pred_list, label_list) if x == y) / len(pred_list)  # accuracy
         return valid_perf
 
+    def _calc_oob(self, X, y, idxs):
+        X = X.reshape((-1, X.shape[1] * X.shape[2]))
+        rf_model=RandomForestClassifierDV(n_estimators=self.num_weak, n_jobs=-1)
+        rf_model.fit(X, y)
+        # return (rf_model.evaluate_oob_accuracy(X, y)).to_numpy()
+        rf_model.evaluate_oob_accuracy(X, y)
+        self.oob_cnt[idxs] += rf_model.oob_cnt_for_rl
+        self.oob_raw[idxs] += rf_model.oob_raw_for_rl
+        return np.divide(self.oob_raw[idxs], self.oob_cnt[idxs])
+
     def evaluate(self, X, y):
         self.val_model.eval()
         X = torch.unsqueeze(X, 1)
@@ -125,14 +128,17 @@ class Odvrl(DynamicValuator):
     def one_step(self, step_id, X, y, val_dataset):
         """Train value estimator, estimate OOB values
         """
-        # first OOB with baseline performance
+        # initialize OOB memory
+        self.oob_raw = np.ones(len(y))
+        self.oob_cnt = np.ones(len(X))
+
         # baseline performance
         valid_perf = self._test_acc(self.ori_model, val_dataset)
 
         # load evaluation network to device
         self.value_estimator = self.value_estimator.to(self.device)
         # loss function
-        dvrl_criterion = DvrlLoss(self.epsilon, self.threshold).to(self.device)
+        dvrl_criterion = ProposedLoss(self.epsilon).to(self.device)
         # optimizer
         dvrl_optimizer = torch.optim.Adam(self.value_estimator.parameters(), lr=self.learning_rate)
         # learning rate scheduler
@@ -147,7 +153,7 @@ class Odvrl(DynamicValuator):
             self.value_estimator.zero_grad()
             self.value_estimator.freeze_encoder()
             dvrl_optimizer.zero_grad()
-            
+
             # train predictor from scratch everytime
             new_model = copy.copy(self.pred_model)
             new_model.to(self.device)
@@ -158,7 +164,7 @@ class Odvrl(DynamicValuator):
             data_value_list = []
             s_input = []
 
-            for batch_si in (16, 32):
+            for batch_si in (128, 256):
                 train_loader = utils.CustomDataloader(X=X, y=y, batch_size=int(batch_si))
                 for batch_data in train_loader:
                     self.val_model.eval()
@@ -175,7 +181,17 @@ class Odvrl(DynamicValuator):
                     y_pred_diff = torch.abs(label_one_hot - label_val_pred)
 
                     # selection estimation
-                    est_dv_curr = self.value_estimator(feature, label_one_hot, y_pred_diff)
+                    if self.explorer(self.outer_iterations, epoch):
+                        est_dv_curr = self._calc_oob(
+                            torch.squeeze(feature).cpu().detach().numpy(), 
+                            label.cpu().detach().numpy(), 
+                            train_loader.idxs
+                        )
+                        est_dv_curr = torch.unsqueeze(torch.tensor(est_dv_curr), dim=1)
+                    else:
+                        est_dv_curr = self.value_estimator(feature, label_one_hot, y_pred_diff)
+                        est_dv_curr = est_dv_curr.to('cpu')
+
                     data_value_list.append(est_dv_curr)
 
                     # 'sel_prob_curr' is a 01 vector generated by binomial distributions
@@ -184,13 +200,13 @@ class Odvrl(DynamicValuator):
                     sel_prob_curr = torch.Tensor(sel_prob_curr).to(self.device)
                     s_input.append(sel_prob_curr)
 
-                    # train new model
+                    # train new prediction model
                     output = new_model(feature[selected_idxs].float())
-                    # loss function
+                    # loss function of the prediction model
                     pre_criterion = torch.nn.CrossEntropyLoss(reduction='none')
                     loss = pre_criterion(output, label[selected_idxs])
 
-                    # back propagation
+                    # back propagation for the prediction model
                     loss.mean().backward()
                     pre_optimizer.step()
 
