@@ -41,10 +41,7 @@ class RlLoss(torch.nn.Module):
         return dve_loss
 
 
-class 
-
-
-class Proposed(DynamicValuator):
+class Frequp(DynamicValuator):
     """Online Data Valuation using Reinforcement Learning (DVRL) and OOB class.
     """
     def __init__(self, num_weak, pred_model, val_model, value_estimator, parameters) -> None:
@@ -176,6 +173,7 @@ class Proposed(DynamicValuator):
         self.value_estimator = self.value_estimator.to(self.device)
         # loss function
         dvrl_criterion = RlLoss(self.epsilon).to(self.device)
+        freq_criterion = torch.nn.MSELoss()
         # optimizer
         dvrl_optimizer = torch.optim.Adam(self.value_estimator.parameters(), lr=self.vest_learning_rate)
         # learning rate scheduler
@@ -230,6 +228,10 @@ class Proposed(DynamicValuator):
                             train_loader.idxs
                         )
                         est_dv_curr = torch.unsqueeze(torch.tensor(est_dv_curr), dim=1)
+                        est_dv_curr_hat = self.value_estimator(feature, label_one_hot, y_pred_diff)
+                        loss = freq_criterion(est_dv_curr, est_dv_curr_hat)
+                        loss.backward()
+                        dvrl_optimizer.step()
                     else:
                         est_dv_curr = self.value_estimator(feature, label_one_hot, y_pred_diff)
                         est_dv_curr = est_dv_curr.to('cpu')
