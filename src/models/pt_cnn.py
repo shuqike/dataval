@@ -5,6 +5,15 @@ from src.models.classifier import Casifier
 from transformers import AutoFeatureExtractor, AutoImageProcessor, AutoModelForImageClassification, ResNetForImageClassification, ConvNextFeatureExtractor, ConvNextForImageClassification
 
 
+class ReallySimple(torch.nn.Module):
+    def __init__(self) -> None:
+        super(ReallySimple, self).__init__()
+        self.layer = torch.nn.Linear(784)
+
+    def forward(self, x):
+        return F.softmax(self.layer(x))
+
+
 class LeNetMNIST(torch.nn.Module):
     def __init__(self):
         super(LeNetMNIST, self).__init__()

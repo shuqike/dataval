@@ -16,7 +16,9 @@ class Vestimator(torch.nn.Module):
 
         self.net_ = torch.nn.Sequential(*layers)
         self.combine_layer = torch.nn.Sequential(
-            torch.nn.Linear(output_dim*2, 1),
+            torch.nn.Linear(output_dim*2, 10),
+            torch.nn.ReLU(inplace=True),
+            torch.nn.Linear(output_dim, 1),
             torch.nn.Sigmoid()
         )
 
