@@ -4,6 +4,7 @@ import warnings
 warnings.filterwarnings("ignore")
 import numpy as np
 import sklearn
+import tensorflow as tf
 import torch
 import wandb
 import src.utils as utils
@@ -69,8 +70,8 @@ class Frequp(DynamicValuator):
         self.vest_lr_scheduler = parameters.vest_lr_scheduler
 
         # prepare the original model, prediction model and validation model
-        self.ori_model = copy.deepcopy(pred_model)
-        self.pred_model = copy.deepcopy(pred_model)
+        self.ori_model = tf.keras.models.clone_model(pred_model)
+        self.pred_model = tf.keras.models.clone_model(pred_model)
         # self.val_model = val_model
         # self.val_model.to(self.device)
 
@@ -164,7 +165,7 @@ class Frequp(DynamicValuator):
         self.oob_raw = np.ones(len(y))
         self.oob_cnt = np.ones(len(X))
 
-        self.val_model = copy.deepcopy(self.pred_model)
+        self.val_model = tf.keras.models.clone_model(self.pred_model)
         self.val_model.fit(X_val.numpy(), 
                            torch.nn.functional.one_hot(y_val, num_classes=10).numpy())
         self.val_model.verbose = False
@@ -210,7 +211,7 @@ class Frequp(DynamicValuator):
                     dvrl_optimizer.zero_grad()
                     freqsum = 0
                     # train predictor from scratch everytime
-                    new_model = copy.copy(self.pred_model)
+                    new_model = tf.keras.models.clone_model(self.pred_model)
                     data_value_list = []
                     s_input = []
                     # self.val_model.eval()
