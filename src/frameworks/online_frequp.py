@@ -84,12 +84,12 @@ class Frequp(DynamicValuator):
         elif parameters.explore_strategy == 'exponential':
             self.explorer = utils.ExponentialExplorer(parameters.epsilon0)
 
-    def _test_acc(self, model, val_dataset):
+    def _test_acc(self, model, X_val, y_val):
         pred_list = []
         label_list = []
         model.eval()
         model.to(self.device)
-        val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=self.val_batch_size, num_workers=self.num_workers, shuffle=True)
+        val_loader = utils.CustomDataloader(X_val, y_val, self.val_batch_size)
         for batch_data in val_loader:
             feature, label = batch_data
 
@@ -151,7 +151,7 @@ class Frequp(DynamicValuator):
         values = torch.squeeze(values)
         return values.cpu().detach().numpy()
 
-    def one_step(self, step_id, X, y, val_dataset, subset_len, corrupted_num, noisy_idxs, discover_record_interval):
+    def one_step(self, step_id, X, y, X_val, y_val, subset_len, corrupted_num, noisy_idxs, discover_record_interval):
         """Train value estimator, estimate OOB values
         """
         # initialize OOB memory
@@ -167,7 +167,7 @@ class Frequp(DynamicValuator):
         self.oob_cnt = np.ones(len(X))
 
         # baseline performance
-        valid_perf = self._test_acc(self.ori_model, val_dataset)
+        valid_perf = self._test_acc(self.ori_model, X_val, y_val)
 
         # load evaluation network to device
         self.value_estimator = self.value_estimator.to(self.device)
@@ -259,7 +259,7 @@ class Frequp(DynamicValuator):
                     utils.super_save()
 
             # test the performance of the new model
-            dvrl_perf = self._test_acc(new_model, val_dataset)
+            dvrl_perf = self._test_acc(new_model, X_val, y_val)
             reward = dvrl_perf - valid_perf
 
             if reward > best_reward:
