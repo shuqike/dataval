@@ -8,7 +8,7 @@ from transformers import AutoFeatureExtractor, AutoImageProcessor, AutoModelForI
 class ReallySimple(torch.nn.Module):
     def __init__(self) -> None:
         super(ReallySimple, self).__init__()
-        self.layer = torch.nn.Linear(784)
+        self.layer = torch.nn.Linear(784, 10)
 
     def forward(self, x):
         return F.softmax(self.layer(x))
