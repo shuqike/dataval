@@ -50,7 +50,7 @@ class Frequp(DynamicValuator):
             num_weak: B, number of weak learner models
         """
         self.is_debug = parameters.is_debug
-        self.discover_step = 0
+        self.step = 0
         self.num_weak=num_weak
 
         self.saving_path = parameters.saving_path  # '../logs/odvrl/selection_network'
@@ -124,7 +124,6 @@ class Frequp(DynamicValuator):
         if self.is_debug:
             guess_idxs = np.argsort(np.divide(self.oob_raw, self.oob_cnt))
         else:
-            self.discover_step += 1
             values = []
             for i in range(self.num_data // self.val_batch_size):
                 part_values = self.evaluate(
@@ -135,8 +134,9 @@ class Frequp(DynamicValuator):
             guess_idxs = np.argsort(values)
         print(guess_idxs[:10])
         print(self.noisy_idxs[:10])
+        print(values.sort()[:10], values.sort()[-10:])
         discover_rate = len(np.intersect1d(guess_idxs[:self.corrupted_num], self.noisy_idxs)) / self.corrupted_num
-        wandb.log({'discover_step': self.discover_step, 'discover rate': discover_rate})
+        wandb.log({'step': self.step, 'discover rate': discover_rate})
 
     def evaluate(self, X, y):
         print(X.shape, y.shape)
@@ -175,7 +175,7 @@ class Frequp(DynamicValuator):
         dvrl_criterion = RlLoss(self.epsilon).to(self.device)
         freq_criterion = torch.nn.MSELoss()
         # optimizer
-        dvrl_optimizer = torch.optim.Adam(self.value_estimator.parameters(), lr=self.vest_learning_rate)
+        dvrl_optimizer = torch.optim.SGD(self.value_estimator.parameters(), lr=self.vest_learning_rate)
         # learning rate scheduler
         if self.vest_lr_scheduler == 'exponential':
             scheduler = torch.optim.lr_scheduler.ExponentialLR(dvrl_optimizer, gamma=0.999)
@@ -186,28 +186,26 @@ class Frequp(DynamicValuator):
 
         best_reward = 0
         for epoch in range(self.outer_iterations):
-            # change learning rate
-            scheduler.step()
-            # clean up grads
-            self.value_estimator.train()
-            self.value_estimator.zero_grad()
-            self.value_estimator.freeze_encoder()
-            dvrl_optimizer.zero_grad()
-            freqsum = 0
-
-            # train predictor from scratch everytime
-            new_model = copy.copy(self.pred_model)
-            new_model.to(self.device)
-            # predictor optimizer
-            pre_optimizer = torch.optim.Adam(new_model.parameters(), lr=self.pred_learning_rate)
-
-            # use a list save all s_input and data values
-            data_value_list = []
-            s_input = []
-
-            for batch_si in (64, 128, 256, 512):
+            for batch_si in [1000]:
                 train_loader = utils.CustomDataloader(X=X, y=y, batch_size=int(batch_si))
                 for batch_data in train_loader:
+                    # change learning rate
+                    scheduler.step()
+                    # clean up grads
+                    self.value_estimator.train()
+                    self.value_estimator.zero_grad()
+                    # self.value_estimator.freeze_encoder()
+                    dvrl_optimizer.zero_grad()
+                    freqsum = 0
+                    # train predictor from scratch everytime
+                    new_model = copy.copy(self.pred_model)
+                    new_model.to(self.device)
+                    # predictor optimizer
+                    pre_optimizer = torch.optim.Adam(new_model.parameters(), lr=self.pred_learning_rate)
+
+                    # use a list save all s_input and data values
+                    data_value_list = []
+                    s_input = []
                     self.val_model.eval()
                     new_model.train()
                     new_model.zero_grad()
@@ -253,42 +251,33 @@ class Frequp(DynamicValuator):
                     loss.mean().backward()
                     pre_optimizer.step()
 
-                del train_loader
-                
-                if self.device == 'cuda':
-                    utils.super_save()
+                    # test the performance of the new model
+                    dvrl_perf = self._test_acc(new_model, val_dataset)
+                    reward = dvrl_perf - valid_perf
 
-            # test the performance of the new model
-            dvrl_perf = self._test_acc(new_model, val_dataset)
-            reward = dvrl_perf - valid_perf
+                    if reward > best_reward:
+                        best_reward = reward
+                        flag_save = True
+                    else:
+                        flag_save = False
 
-            if reward > best_reward:
-                best_reward = reward
-                flag_save = True
-            else:
-                flag_save = False
-
-            # update the selection network
-            reward = torch.Tensor([reward])
-            data_value_list = torch.cat(data_value_list, 0)
-            s_input = torch.cat(s_input, 0)
-            reward = reward.to(self.device)
-            data_value_list = data_value_list.to(self.device)
-            s_input = s_input.to(self.device)
-            loss = freqsum + dvrl_criterion(data_value_list, s_input, reward)
-            loss.backward()
-            dvrl_optimizer.step()
-
-            del new_model
+                    # update the selection network
+                    reward = torch.Tensor([reward])
+                    data_value_list = torch.cat(data_value_list, 0)
+                    s_input = torch.cat(s_input, 0)
+                    reward = reward.to(self.device)
+                    data_value_list = data_value_list.to(self.device)
+                    s_input = s_input.to(self.device)
+                    loss = freqsum + dvrl_criterion(data_value_list, s_input, reward)
+                    loss.backward()
+                    dvrl_optimizer.step()
             
-            if self.device == 'cuda':
-                utils.super_save()
-            
-            # wandb log
-            wandb.log({'step': step_id*self.outer_iterations+epoch, 'reward': reward, 'prob': np.max(data_value_list.cpu().detach().numpy())})
+                    # wandb log
+                    self.step += 1
+                    wandb.log({'step': self.step, 'reward': reward, 'prob': np.max(data_value_list.cpu().detach().numpy())})
 
-            if epoch % self.discover_record_interval == 0:
-                self._calc_discover_rate()
+                    if epoch % self.discover_record_interval == 0:
+                        self._calc_discover_rate()
 
             if flag_save or epoch % 50 ==0:
                 torch.save(
