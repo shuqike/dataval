@@ -62,6 +62,7 @@ class Frequp(DynamicValuator):
         self.threshold = 0.9  # Encourages exploration
         self.val_batch_size = parameters.val_batch_size  # Batch size for validation 
         self.outer_iterations = parameters.epochs
+        self.rl_batch_size = parameters.rl_batch_size
 
         self.device = parameters.device
         self.num_workers = parameters.num_workers
@@ -145,7 +146,7 @@ class Frequp(DynamicValuator):
         X = X.to(self.device)
         y = y.to(self.device)
         label_one_hot = torch.nn.functional.one_hot(y).to(self.device)
-        y_train_hat = torch.abs(label_one_hot - label_val_pred.numpy())
+        y_train_hat = torch.abs(label_one_hot - label_val_pred)
         values =  self.value_estimator(X, label_one_hot, y_train_hat.float())
         values = torch.squeeze(values)
         return values.cpu().detach().numpy()
@@ -199,101 +200,100 @@ class Frequp(DynamicValuator):
 
             # use a list save all s_input and data values
 
-            for batch_si in (64, 128, 256, 512):
-                train_loader = utils.CustomDataloader(X=X, y=y, batch_size=int(batch_si))
-                for batch_data in train_loader:
-                    # change learning rate
-                    scheduler.step()
-                    # clean up grads
-                    self.value_estimator.train()
-                    self.value_estimator.zero_grad()
-                    # self.value_estimator.freeze_encoder()
-                    dvrl_optimizer.zero_grad()
-                    freqsum = 0
-                    # train predictor from scratch everytime
-                    new_model = copy.deepcopy(self.pred_model)
-                    data_value_list = []
-                    s_input = []
-                    # self.val_model.eval()
-                    # new_model.train()
-                    # new_model.zero_grad()
-                    # pre_optimizer.zero_grad()
+            train_loader = utils.CustomDataloader(X=X, y=y, batch_size=int(self.rl_batch_size))
+            for batch_data in train_loader:
+                # change learning rate
+                scheduler.step()
+                # clean up grads
+                self.value_estimator.train()
+                self.value_estimator.zero_grad()
+                # self.value_estimator.freeze_encoder()
+                dvrl_optimizer.zero_grad()
+                freqsum = 0
+                # train predictor from scratch everytime
+                new_model = copy.deepcopy(self.pred_model)
+                data_value_list = []
+                s_input = []
+                # self.val_model.eval()
+                # new_model.train()
+                # new_model.zero_grad()
+                # pre_optimizer.zero_grad()
 
-                    feature, label = batch_data
-                    # feature = feature.to(self.device)
-                    # label = label.to(self.device)
-                    label_one_hot = torch.nn.functional.one_hot(label, num_classes=10)
-                    label_val_pred = self.val_model(feature.numpy()).numpy()
-                    # label_val_pred = label_val_pred.view(label_val_pred.shape[0], -1)
+                feature, label = batch_data
+                # feature = feature.to(self.device)
+                # label = label.to(self.device)
+                label_one_hot = torch.nn.functional.one_hot(label, num_classes=10)
+                label_val_pred = self.val_model(feature.numpy()).numpy()
+                # label_val_pred = label_val_pred.view(label_val_pred.shape[0], -1)
 
-                    y_pred_diff = torch.abs(label_one_hot - label_val_pred)
+                y_pred_diff = torch.abs(label_one_hot - label_val_pred)
 
-                    # selection estimation
-                    if self.explorer(self.outer_iterations, epoch):
-                        est_dv_curr = self._calc_oob(
-                            feature.view(feature.shape[0], -1).cpu().detach().numpy(), 
-                            label.cpu().detach().numpy(), 
-                            train_loader.idxs
-                        )
-                        est_dv_curr = torch.tensor(est_dv_curr).view(*est_dv_curr.shape, 1)
-                        # est_dv_curr = torch.unsqueeze(torch.tensor(est_dv_curr), dim=1)
-                        est_dv_curr_hat = self.value_estimator(feature, label_one_hot, y_pred_diff.float())
-                        freqsum = freq_criterion(est_dv_curr.float(), est_dv_curr_hat)
-                    else:
-                        est_dv_curr = self.value_estimator(feature, label_one_hot, y_pred_diff.float())
-                        est_dv_curr = est_dv_curr.to('cpu')
+                # selection estimation
+                if self.explorer(self.outer_iterations, epoch):
+                    est_dv_curr = self._calc_oob(
+                        feature.view(feature.shape[0], -1).cpu().detach().numpy(), 
+                        label.cpu().detach().numpy(), 
+                        train_loader.idxs
+                    )
+                    est_dv_curr = torch.tensor(est_dv_curr).view(*est_dv_curr.shape, 1)
+                    # est_dv_curr = torch.unsqueeze(torch.tensor(est_dv_curr), dim=1)
+                    est_dv_curr_hat = self.value_estimator(feature, label_one_hot, y_pred_diff.float())
+                    # freqsum = freq_criterion(est_dv_curr.float(), est_dv_curr_hat)
+                else:
+                    est_dv_curr = self.value_estimator(feature, label_one_hot, y_pred_diff.float())
+                    est_dv_curr = est_dv_curr.to('cpu')
 
-                    data_value_list.append(est_dv_curr)
+                data_value_list.append(est_dv_curr)
 
-                    # 'sel_prob_curr' is a 01 vector generated by binomial distributions
-                    sel_prob_curr = np.random.binomial(1, est_dv_curr.cpu().detach().numpy(), est_dv_curr.shape)
-                    # Exception (When selection probability is 0)
-                    if np.sum(sel_prob_curr) == 0:
-                        est_dv_curr = 0.5 * torch.ones(np.shape(est_dv_curr))
-                        sel_prob_curr = np.random.binomial(1, est_dv_curr, est_dv_curr.shape)
-                    selected_idxs = np.where(sel_prob_curr)[0]
-                    sel_prob_curr = torch.Tensor(sel_prob_curr).to(self.device)
-                    s_input.append(sel_prob_curr)
+                # 'sel_prob_curr' is a 01 vector generated by binomial distributions
+                sel_prob_curr = np.random.binomial(1, est_dv_curr.cpu().detach().numpy(), est_dv_curr.shape)
+                # Exception (When selection probability is 0)
+                if np.sum(sel_prob_curr) == 0:
+                    est_dv_curr = 0.5 * torch.ones(np.shape(est_dv_curr))
+                    sel_prob_curr = np.random.binomial(1, est_dv_curr, est_dv_curr.shape)
+                selected_idxs = np.where(sel_prob_curr)[0]
+                sel_prob_curr = torch.Tensor(sel_prob_curr).to(self.device)
+                s_input.append(sel_prob_curr)
 
-                    # train new prediction model
-                    new_model.fit(feature[selected_idxs].numpy(), label_one_hot[selected_idxs].numpy())
-                    
-                    # output = new_model(feature[selected_idxs].float())
-                    # loss function of the prediction model
-                    # pre_criterion = torch.nn.CrossEntropyLoss(reduction='none')
-                    # loss = pre_criterion(output, label[selected_idxs])
-                    # back propagation for the prediction model
-                    # loss.mean().backward()
-                    # pre_optimizer.step()
+                # train new prediction model
+                new_model.fit(feature[selected_idxs].numpy(), label_one_hot[selected_idxs].numpy())
+                
+                # output = new_model(feature[selected_idxs].float())
+                # loss function of the prediction model
+                # pre_criterion = torch.nn.CrossEntropyLoss(reduction='none')
+                # loss = pre_criterion(output, label[selected_idxs])
+                # back propagation for the prediction model
+                # loss.mean().backward()
+                # pre_optimizer.step()
 
-                    # test the performance of the new model
-                    # dvrl_perf = self._test_acc(new_model, X_val, y_val)
-                    y_valid_hat = new_model.predict(X_val.numpy())
-                    dvrl_perf = sklearn.metrics.accuracy_score(y_val.numpy(), np.argmax(y_valid_hat, axis=1))
-                    reward = dvrl_perf - valid_perf
+                # test the performance of the new model
+                # dvrl_perf = self._test_acc(new_model, X_val, y_val)
+                y_valid_hat = new_model.predict(X_val.numpy())
+                dvrl_perf = sklearn.metrics.accuracy_score(y_val.numpy(), np.argmax(y_valid_hat, axis=1))
+                reward = dvrl_perf - valid_perf
 
-                    if reward > best_reward:
-                        best_reward = reward
-                        flag_save = True
-                    else:
-                        flag_save = False
+                if reward > best_reward:
+                    best_reward = reward
+                    flag_save = True
+                else:
+                    flag_save = False
 
-                    # update the selection network
-                    reward = torch.Tensor([reward])
-                    data_value_list = torch.cat(data_value_list, 0)
-                    s_input = torch.cat(s_input, 0)
-                    reward = reward.to(self.device)
-                    data_value_list = data_value_list.to(self.device)
-                    s_input = s_input.to(self.device)
-                    loss = freqsum + dvrl_criterion(data_value_list, s_input, reward)
-                    loss.backward()
-                    dvrl_optimizer.step()
-                    
-                    # wandb log
-                    wandb.log({'episode': step_id*self.outer_iterations+epoch, 'reward': reward, 'prob': np.max(data_value_list.cpu().detach().numpy())})
+                # update the selection network
+                reward = torch.Tensor([reward])
+                data_value_list = torch.cat(data_value_list, 0)
+                s_input = torch.cat(s_input, 0)
+                reward = reward.to(self.device)
+                data_value_list = data_value_list.to(self.device)
+                s_input = s_input.to(self.device)
+                loss = freqsum + dvrl_criterion(data_value_list, s_input, reward)
+                loss.backward()
+                dvrl_optimizer.step()
+                
+                # wandb log
+                wandb.log({'episode': step_id*self.outer_iterations+epoch, 'reward': reward, 'prob': np.max(data_value_list.cpu().detach().numpy())})
 
-                    if epoch % self.discover_record_interval == 0:
-                        self._calc_discover_rate()
+                if epoch % self.discover_record_interval == 0:
+                    self._calc_discover_rate()
 
             if flag_save or epoch % 50 ==0:
                 torch.save(
