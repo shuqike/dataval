@@ -144,6 +144,8 @@ def create_noisy_mnist(method='uniform', noise_level='normal'):
     else: raise NotImplementedError
 
     # encode features
+    x_train = x_train.reshape((len(x_train), np.prod(x_train.shape[1:])))
+    x_test = x_test.reshape((len(x_test), np.prod(x_test.shape[1:])))
     try:
         encoder = keras.models.load_model('../data/pretrained_models/mnist_encoder')
     except:
@@ -167,8 +169,6 @@ def create_noisy_mnist(method='uniform', noise_level='normal'):
         # Create the decoder model
         decoder = keras.Model(encoded_input, decoder_layer(encoded_input))
         autoencoder.compile(optimizer='adam', loss='binary_crossentropy')
-        x_train = x_train.reshape((len(x_train), np.prod(x_train.shape[1:])))
-        x_test = x_test.reshape((len(x_test), np.prod(x_test.shape[1:])))
         autoencoder.fit(x_train, x_train,
             epochs=50,
             batch_size=256,
