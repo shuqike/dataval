@@ -191,7 +191,7 @@ class Frequp(DynamicValuator):
             # clean up grads
             self.value_estimator.train()
             self.value_estimator.zero_grad()
-            self.value_estimator.freeze_encoder()
+            # self.value_estimator.freeze_encoder()
             dvrl_optimizer.zero_grad()
             freqsum = 0
 
