@@ -11,7 +11,9 @@ class ReallySimple(torch.nn.Module):
         self.layer = torch.nn.Linear(input_dim, 10)
 
     def forward(self, x):
-        return F.softmax(self.layer(x))
+        x = self.layer(x)
+        x = F.softmax(x, dim=1)
+        return x
 
 
 class LeNetMNIST(torch.nn.Module):

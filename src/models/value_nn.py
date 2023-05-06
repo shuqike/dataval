@@ -26,10 +26,10 @@ class Vestimator(torch.nn.Module):
         :param y: train_labels
         :param y_hat_diff: l1 difference between predicion and grountruth
         """
-        x = torch.flatten(x, start_dim=2)
-        x = torch.cat([x, y], dim=2)
+        x = x.view(x.shape[0], -1)
+        x = torch.cat([x, y], dim=1)
         x = self.net_(x.float())
-        x = torch.cat([x, y_hat_diff], dim=2)
+        x = torch.cat([x, y_hat_diff], dim=1)
         output = self.combine_layer(x)
         return output
 

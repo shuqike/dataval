@@ -25,7 +25,8 @@ class CustomDataloader:
     """Refer to https://www.programcreek.com/python/example/125051/torch.utils.data.RandomSampler
     """
     def __init__(self, X, y, batch_size) -> None:
-        self.X = torch.unsqueeze(X, dim=1)
+        # self.X = torch.unsqueeze(X, dim=1)
+        self.X = X
         self.y = y
         self.num_data = len(y)
         self.batch_size = batch_size
